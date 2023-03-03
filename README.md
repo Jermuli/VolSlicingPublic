@@ -23,6 +23,10 @@ olettaen että .NET 6 kehitysympäristö on asennettu. Ensimmäisellä projektin
 avaamiskerralla 
 voi kestää hetki ennen kuin käytetyt kirjastot saadaan ladattua nugetista. 
 
+Oleellisimmat testaamisessa muutettavat ominaisuudet ovat datan dimensiot, ja näitä 
+pääsee muokkaamaan MainWindow.xaml tiedostosta muuttamalla VolumeViewer komponentin 
+MapWidth, MapHeight ja MapDepth arvoja.
+
 ## Yleisimmät kääntämisen ongelmat 
 
 Jos kääntämisen yhteydessä ohjelma kaatuu ja heittää 

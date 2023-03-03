@@ -38,3 +38,7 @@ ohjelma saattaa kaatua ja antaa virheviestin, jossa kerrotaan että
 jokin resurssi on jo muun prosessin käytössä. Johtuu luultavasti siitä, että 
 aiempi ohjelman instanssi vielä jäänyt kummittelemaan taustalle. Odota hetki ja 
 kokeile uudestaan.
+
+Visual studio saattaa myös näyttää että koodissa on virhe ja osaa shadereiden 
+tiedostopolusta ei löydy. En ole ihan varma mistä tämä johtuu, mutta tämän 
+ei pitäisi vaikuttaa itse ohjelman kääntämiseen.

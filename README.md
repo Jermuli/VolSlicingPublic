@@ -25,7 +25,8 @@ voi kestää hetki ennen kuin käytetyt kirjastot saadaan ladattua nugetista.
 
 Oleellisimmat testaamisessa muutettavat ominaisuudet ovat datan dimensiot, ja näitä 
 pääsee muokkaamaan MainWindow.xaml tiedostosta muuttamalla VolumeViewer komponentin 
-MapWidth, MapHeight ja MapDepth arvoja.
+MapWidth, MapHeight ja MapDepth arvoja. Käytettävää projektiota voidaan myös muuttaa 
+ortograafisesta perspektiiviin muuttamalla IsOrthographic atribuutin arvon falseksi. 
 
 ## Yleisimmät kääntämisen ongelmat 
 

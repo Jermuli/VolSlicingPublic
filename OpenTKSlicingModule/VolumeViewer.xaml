@@ -23,6 +23,7 @@
             Grid.Row="0"
             Ready="OpenTkControl_Ready"
             />
+        <TextBlock Text="Zoom: 100%" Foreground="AliceBlue" Width="75" Height="15" x:Name="ZoomText" HorizontalAlignment="Left" VerticalAlignment="Top"/>
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition></ColumnDefinition>

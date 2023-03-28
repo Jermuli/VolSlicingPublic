@@ -21,10 +21,11 @@ namespace OpenTKSlicingModule
         /// </summary>
         /// <param name="position">Cam position</param>
         /// <param name="aspectRatio">Aspect ratio</param>
-        public Camera(Vector3 position, float aspectRatio)
+        public Camera(Vector3 position, float aspectRatio, bool orth)
         {
             Position = position;
             AspectRatio = aspectRatio;
+            IsOrthographic = orth;
         }
 
         private Vector3 _pos = (0f,0f,0f);
@@ -42,11 +43,19 @@ namespace OpenTKSlicingModule
         // This is simply the aspect ratio of the viewport, used for the projection matrix.
         public float AspectRatio { private get; set; }
 
+        public Vector2 ViewSize { get; set; } = new Vector2(1f, 1f);
+
+        public float Zoom { get; set; } = 1f;
+
+        public bool IsOrthographic { get; set; } = true;
+
         public Vector3 Front => _front;
 
         public Vector3 Up => _up;
 
         public Vector3 Right => _right;
+
+        public Vector3 InvUp = (0, 1f, 0);
 
         // The field of view (FOV) is the vertical angle of the camera view.
         // This has been discussed more in depth in a previous tutorial,
@@ -75,6 +84,7 @@ namespace OpenTKSlicingModule
         // Get the projection matrix using the same method we have used up until this point
         public Matrix4 GetProjectionMatrix()
         {
+            if(IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X*Zoom*7, ViewSize.Y*Zoom*7 ,1f, farClipPlane);
             return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane); //Update far plane to change according to space
         }
 
@@ -82,11 +92,13 @@ namespace OpenTKSlicingModule
             farClipPlane = plane;
         }
 
+
         // This function is going to update the direction vertices using some of the math learned in the web tutorials.
         private void UpdateVectors()
         {
             Vector3 camDir = Vector3.Normalize(Position);
-            _right = Vector3.Normalize(Vector3.Cross((0f,1f,0f), camDir));
+            //_right = Vector3.Normalize(Vector3.Cross(InvUp, camDir));
+            _right = Vector3.Normalize(Vector3.Cross(_up, camDir));
             _up = Vector3.Cross(camDir, _right);
         }
     }

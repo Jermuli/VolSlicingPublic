@@ -15,18 +15,62 @@ namespace OpenTKSlicingModule
         /// Initialize numerous variables required for the scene making process.
         /// </summary>
         #region Variables
+
         private float[] verts = {
-                          -0.5f,  0.5f, -0.5f,
-                          0.5f,  0.5f, -0.5f,
-                          0.5f, -0.5f, -0.5f,
-                          -0.5f, -0.5f, -0.5f,
-                          -0.5f,  0.5f,  0.5f,
-                          0.5f,  0.5f,  0.5f,
-                          0.5f, -0.5f,  0.5f,
-                          -0.5f, -0.5f,  0.5f
-        };
+                          -0.5f,  0.5f, -0.5f,      1.0f, 0.0f, 0.0f, //X R
+                          0.5f,  0.5f, -0.5f,       1.0f, 0.0f, 0.0f,
+
+                          0.5f,  0.5f, -0.5f,      0.0f, 0.0f, 1.0f, //Y B
+                          0.5f,  -0.5f, -0.5f,     0.0f, 0.0f, 1.0f,
+
+                          0.5f,  0.5f, -0.5f,      0.0f, 1.0f, 0.0f, //Z G
+                          0.5f,  0.5f, 0.5f,       0.0f, 1.0f, 0.0f,
+
+                          -0.5f,  -0.5f, -0.5f,     1.0f, 1.0f, 1.0f,
+                          0.5f, -0.5f, -0.5f,       1.0f, 1.0f, 1.0f,
+
+                          -0.5f, -0.5f, -0.5f,       1.0f, 1.0f, 1.0f,
+                          -0.5f, 0.5f, -0.5f,        1.0f, 1.0f, 1.0f,
+
+
+                          -0.5f, 0.5f, 0.5f,        1.0f, 1.0f, 1.0f, //Back square
+                          0.5f, 0.5f, 0.5f,         1.0f, 1.0f, 1.0f,
+
+                          -0.5f, 0.5f, 0.5f,        1.0f, 1.0f, 1.0f,
+                          -0.5f, -0.5f, 0.5f,       1.0f, 1.0f, 1.0f,
+
+                          -0.5f, -0.5f, 0.5f,       1.0f, 1.0f, 1.0f,
+                          0.5f, -0.5f, 0.5f,        1.0f, 1.0f, 1.0f,
+
+                          0.5f, -0.5f, 0.5f,        1.0f, 1.0f, 1.0f,
+                          0.5f, 0.5f, 0.5f,         1.0f, 1.0f, 1.0f,
+
+
+                          -0.5f, -0.5f, -0.5f,      1.0f, 1.0f, 1.0f, //Square connectors Z defined earlier
+                          -0.5f, -0.5f, 0.5f,       1.0f, 1.0f, 1.0f,
+
+                          0.5f, -0.5f, -0.5f,       1.0f, 1.0f, 1.0f,
+                          0.5f, -0.5f, 0.5f,        1.0f, 1.0f, 1.0f,
+
+                          -0.5f, 0.5f, -0.5f,       1.0f, 1.0f, 1.0f,
+                          -0.5f, 0.5f, 0.5f,        1.0f, 1.0f, 1.0f
+        };       
 
         private uint[] inds = { 0, 1,
+                                2, 3,
+                                4, 5,
+                                6, 7,
+                                8, 9,
+                                10, 11,
+                                12, 13,
+                                14, 15,
+                                16, 17,
+                                18, 19,
+                                20, 21,
+                                22, 23
+        };
+
+        private uint[] inds2 = { 0, 1,
                             1, 2,
                             2, 3,
                             3, 0,
@@ -52,49 +96,24 @@ namespace OpenTKSlicingModule
 
         };
 
-        private float[] vertsMap = new float[]{
-                          -0.05f, -0.05f, -0.05f,   1.0f, 0f, 0f,
-                          0.05f, -0.05f, -0.05f,    1.0f, 0f, 0f,
-                          -0.05f, -0.05f, -0.05f,   0f, 1.0f, 0f,
-                          -0.05f, 0.05f, -0.05f,    0f, 1.0f, 0f,
-                          -0.05f, -0.05f, -0.05f,   0f, 0f, 1.0f,
-                          -0.05f, -0.05f, 0.05f,    0f, 0f, 1.0f
-
-        };
-
-        private uint[] indsMap = { 0, 1,
-                                   2, 3,
-                                   4, 5
-        };
-
         private uint[] indsText = { 0, 1, 2,
                                     2, 3, 0
         };
 
-        private float[] vertsAxelTextX = new float[20];
-        private float[] vertsAxelTextY = new float[20];
-        private float[] vertsAxelTextZ = new float[20];
+        private float[] vertsTextX = new float[20];
+        private float[] vertsTextY = new float[20];
+        private float[] vertsTextZ = new float[20];
+        private float[] vertsText0 = new float[20];
 
-        Vector3[] textPoints = new Vector3[3];
+        private int VAOAxelText;
+
+        private int VBOAxelText;
+
+        private int EBOAxelText;
+
+        private Shader shadAxelText;
 
         private Texture textTexture;
-
-        private int VAOText;
-
-        private int VBOText;
-
-        private int EBOText;
-
-        private Shader shadText;
-
-        private int VAOMap;
-
-        private int VBOMap;
-
-        private int EBOMap;
-
-        private Shader shadMap;
-
 
         private int VAOSq;
 
@@ -104,9 +123,9 @@ namespace OpenTKSlicingModule
 
         private Shader shadSq;
 
-        private float zoomPercent = 1.0f;
+        public float zoomPercent = 1.0f;
 
-        private Camera cam = new Camera(Vector3.UnitZ * 3, 2);
+        private Camera cam = new Camera(Vector3.UnitZ * 3, 2, true);
 
         private Vector2 size;
 
@@ -128,28 +147,7 @@ namespace OpenTKSlicingModule
 
         private Vector2 mouseMult = (1f, 1f);
 
-        private float azimuth = -MathHelper.PiOver2;
-        private float AzimuthAngle
-        {
-            get => MathHelper.RadiansToDegrees(azimuth);
-            set
-            {
-                if (value > 360f) value -= 360f;
-                if (value < -360f) value += 360f;
-                azimuth = MathHelper.DegreesToRadians(value);
-            }
-        }
-
-        private float polar;
-        private float PolarAngle
-        {
-            get => MathHelper.RadiansToDegrees(polar);
-            set
-            {
-                var angle = MathHelper.Clamp(value, -89f, 89f);
-                polar = MathHelper.DegreesToRadians(angle);
-            }
-        }
+        private Quaternion Rots = new Quaternion(0, 0, 0);
 
         private int SliceDepth = 0;
 
@@ -167,79 +165,72 @@ namespace OpenTKSlicingModule
         /// <param name="depth">Depth of the vol data</param>
         /// <param name="winWidth">Width of the openTK control window</param>
         /// <param name="winHeight">Height of the openTK control window</param>
-        public Scene(int width, int height, int depth, int winWidth, int winHeight) {
+        public Scene(int width, int height, int depth, int winWidth, int winHeight, bool isOrtho) {
 
-            float textW = 0.02f;
-            float textH = 0.03f;
-            float textSpace = 0.005f;
+            cam.IsOrthographic = isOrtho;
 
-            Vector3 texXPoint = new Vector3(vertsMap[6] + textSpace + (textH / 2), vertsMap[7], vertsMap[8]);
-            Vector3 texYPoint = new Vector3(vertsMap[18], vertsMap[19] + textSpace + (textH/2), vertsMap[20]);
-            Vector3 texZPoint = new Vector3(vertsMap[30], vertsMap[31], vertsMap[32] + textSpace + (textH / 2));
+            float textBaseSize = MathF.Pow(width * width + height * height, 0.5f) * 0.05f;
 
-            textPoints = new[] { texXPoint, texYPoint, texZPoint };
-
-            float[][] textVerts = { vertsAxelTextX, vertsAxelTextY, vertsAxelTextZ };
-
-            Vector2 xTexture = new Vector2(0, 0.125f);
-            Vector2 yTexture = new Vector2(0.125f, 0.125f);
-            Vector2 zTexture = new Vector2(0.25f, 0.125f);
-            Vector2[] texs = new[] { xTexture, yTexture, zTexture};
+            Vector2 textX = new Vector2(0f, 0.125f);
+            Vector2 textY = new Vector2(0.125f, 0.125f);
+            Vector2 textZ = new Vector2(0.25f, 0.125f);
+            Vector2 text0 = new Vector2(0f, 0.75f);
+            Vector2[] textures = new[] { textX, textY, textZ, text0 };
             float textureW = 0.125f;
             float textureH = 0.125f;
+            float textW = 2f;
+            float textH = 3f;
 
-            for (int i = 0; i < textVerts.Length; i++) {
-                textVerts[i][0] = - textW / 2;
-                textVerts[i][1] = - textH / 2;
-                textVerts[i][2] = 0;
+            float[][] textTextureVerts = { vertsTextX, vertsTextY, vertsTextZ, vertsText0 };
 
-                textVerts[i][3] = texs[i].X;
-                textVerts[i][4] = texs[i].Y - textureH;
 
-                textVerts[i][5] =  - textW / 2;
-                textVerts[i][6] = textH / 2;
-                textVerts[i][7] = 0;
+            for (int i = 0; i < textTextureVerts.Length; i++)
+            {
+                textTextureVerts[i][0] = -textW * textBaseSize / 2;
+                textTextureVerts[i][1] = -textH * textBaseSize / 2;
+                textTextureVerts[i][2] = 0;
 
-                textVerts[i][8] = texs[i].X;
-                textVerts[i][9] = texs[i].Y;
+                textTextureVerts[i][3] = textures[i].X + textureW;
+                textTextureVerts[i][4] = textures[i].Y - textureH;
 
-                textVerts[i][10] = textW / 2;
-                textVerts[i][11] = textH / 2;
-                textVerts[i][12] = 0;
+                textTextureVerts[i][5] = -textW * textBaseSize / 2;
+                textTextureVerts[i][6] = textH * textBaseSize / 2;
+                textTextureVerts[i][7] = 0;
 
-                textVerts[i][13] = texs[i].X + textureW;
-                textVerts[i][14] = texs[i].Y;
+                textTextureVerts[i][8] = textures[i].X + textureW;
+                textTextureVerts[i][9] = textures[i].Y;
 
-                textVerts[i][15] = textW / 2;
-                textVerts[i][16] = - textH / 2;
-                textVerts[i][17] = 0;
+                textTextureVerts[i][10] = textW * textBaseSize / 2;
+                textTextureVerts[i][11] = textH * textBaseSize / 2;
+                textTextureVerts[i][12] = 0;
 
-                textVerts[i][18] = texs[i].X + textureW;
-                textVerts[i][19] = texs[i].Y - textureH;
+                textTextureVerts[i][13] = textures[i].X ;
+                textTextureVerts[i][14] = textures[i].Y;
+
+                textTextureVerts[i][15] = textW * textBaseSize / 2;
+                textTextureVerts[i][16] = -textH * textBaseSize / 2;
+                textTextureVerts[i][17] = 0;
+
+                textTextureVerts[i][18] = textures[i].X ;
+                textTextureVerts[i][19] = textures[i].Y - textureH;
             }
-
-            vertsAxelTextX = textVerts[0];
-            vertsAxelTextY = textVerts[1];
-            vertsAxelTextZ = textVerts[2];
-
 
             mouseMult.X = 2880f / ((float)winWidth);
             mouseMult.Y = 1620f / ((float)winHeight);
+            size = new Vector2(winWidth, winHeight);
+            cam.ViewSize = size;
+            cam.Zoom = zoomPercent;
 
             DataDepth = depth;
             DataHeight = height;
             DataWidth = width;
 
-            verts = new float[]{
-                          width * -0.5f, height * 0.5f, depth * -0.5f,
-                          width * 0.5f,  height * 0.5f, depth * -0.5f,
-                          width * 0.5f, height * -0.5f, depth * -0.5f,
-                          width * -0.5f, height * -0.5f, depth * -0.5f,
-                          width * -0.5f, height *  0.5f, depth *  0.5f,
-                          width * 0.5f, height *  0.5f, depth *  0.5f,
-                          width * 0.5f, height * -0.5f, depth *  0.5f,
-                          width * -0.5f, height * -0.5f, depth *  0.5f
-            };
+            for(int i = 0; i < verts.Length; i += 6)
+            {
+                verts[i] = verts[i] * width;
+                verts[i + 1] = verts[i + 1] * height;
+                verts[i + 2] = verts[i + 2] * depth;
+            }
 
             float maxDist = MathF.Pow((depth * depth + width * width + height * height) * 0.25f, 0.5f);
 
@@ -250,10 +241,10 @@ namespace OpenTKSlicingModule
                           -maxDist, -maxDist, SliceDepth
             };
 
-            float distance = maxDist * 1.5f;
+            float distance = maxDist * 5f;
 
-            float a = (PolarAngle * (MathF.PI)) / 180;
-            float b = (AzimuthAngle * (MathF.PI)) / 180;
+            float a = (0 * (MathF.PI)) / 180;
+            float b = (-90f * (MathF.PI)) / 180;
 
             float XRatio = MathF.Cos(a) * MathF.Cos(b);
             float YRatio = MathF.Sin(a);
@@ -262,7 +253,7 @@ namespace OpenTKSlicingModule
             Vector3 ratios = new Vector3(XRatio, YRatio, ZRatio);
             cam.Position = (distance * ratios);
 
-            float ClipPlane = distance * 3;
+            float ClipPlane = distance * 11;
             cam.SetClipPlane(ClipPlane);
 
             GL.Enable(EnableCap.DepthTest);
@@ -276,13 +267,9 @@ namespace OpenTKSlicingModule
             VBOSq = GL.GenBuffer();
             EBOSq = GL.GenBuffer();
 
-            VAOMap = GL.GenVertexArray();
-            VBOMap = GL.GenBuffer();
-            EBOMap = GL.GenBuffer();
-
-            VAOText = GL.GenVertexArray();
-            VBOText = GL.GenBuffer();
-            EBOText = GL.GenBuffer();
+            VAOAxelText = GL.GenVertexArray();
+            VBOAxelText = GL.GenBuffer();
+            EBOAxelText = GL.GenBuffer();
 
 
             GL.BindVertexArray(VAO);
@@ -290,12 +277,14 @@ namespace OpenTKSlicingModule
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * verts.Length, verts, BufferUsageHint.StaticDraw);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
+
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
+            GL.EnableVertexAttribArray(1);
 
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBO);
             GL.BufferData(BufferTarget.ElementArrayBuffer, inds.Length * sizeof(uint), inds, BufferUsageHint.StaticDraw);
-
 
 
             GL.BindVertexArray(VAOSq);
@@ -309,25 +298,10 @@ namespace OpenTKSlicingModule
             GL.BufferData(BufferTarget.ElementArrayBuffer, indsSq.Length * sizeof(uint), indsSq, BufferUsageHint.StaticDraw);
 
 
-            GL.BindVertexArray(VAOMap);
+            GL.BindVertexArray(VAOAxelText);
 
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOMap);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsMap.Length, vertsMap, BufferUsageHint.StaticDraw);
-
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 0);
-            GL.EnableVertexAttribArray(0);
-
-            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
-            GL.EnableVertexAttribArray(1);
-
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBOMap);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indsMap.Length * sizeof(uint), indsMap, BufferUsageHint.StaticDraw);
-
-
-            GL.BindVertexArray(VAOText);
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOText);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsAxelTextX.Length, vertsAxelTextX, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOAxelText);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsTextX.Length, vertsTextX, BufferUsageHint.StaticDraw);
 
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
@@ -335,7 +309,7 @@ namespace OpenTKSlicingModule
             GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
             GL.EnableVertexAttribArray(1);
 
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBOText);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBOAxelText);
             GL.BufferData(BufferTarget.ElementArrayBuffer, indsText.Length * sizeof(uint), indsText, BufferUsageHint.StaticDraw);
 
 
@@ -345,11 +319,9 @@ namespace OpenTKSlicingModule
             shadSq = new Shader("Shaders/shaderSlice.vert", "Shaders/shaderSlice.frag");
             shadSq.Use();
 
-            shadMap = new Shader("Shaders/shaderMap.vert", "Shaders/shaderMap.frag");
-            shadMap.Use();
+            shadAxelText = new Shader("Shaders/shaderAxelText.vert", "Shaders/shaderAxelText.frag");
+            shadAxelText.Use();
 
-            shadText = new Shader("Shaders/shaderText.vert", "Shaders/shaderText.frag");
-            shadText.Use();
 
             textTexture = Texture.LoadFromFile("Textures/Font.bmp");
             textTexture.Use(TextureUnit.Texture0);
@@ -361,7 +333,7 @@ namespace OpenTKSlicingModule
         /// <param name="width">Vol data width</param>
         /// <param name="height">Vol data heigth</param>
         /// <param name="depth">Vol data depth</param>
-        public void Render(int width, int height, int depth) //float alpha = 1.0f
+        public void Render(int width, int height, int depth)
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
@@ -388,10 +360,8 @@ namespace OpenTKSlicingModule
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq.Length, vertsSq, BufferUsageHint.StaticDraw);
 
             shadSq.Use();
+            var modelSq = Matrix4.CreateFromQuaternion(Rots);
 
-            var modelSq = Matrix4.Identity *
-                        Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(PolarAngle)) *
-                        Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(-(AzimuthAngle + 90f)));
             shadSq.SetMatrix4("model", modelSq);
             shadSq.SetMatrix4("view", cam.GetViewMatrix());
             shadSq.SetMatrix4("projection", cam.GetProjectionMatrix());
@@ -402,48 +372,21 @@ namespace OpenTKSlicingModule
 
 
 
+            GL.BindVertexArray(VAOAxelText);
 
-            GL.Disable(EnableCap.DepthTest);
+            Matrix4 textRot = modelSq;
 
-            GL.BindVertexArray(VAOMap);
+            float textPadding = MathF.Pow(vertsTextX[10] * vertsTextX[10] + vertsTextX[11] * vertsTextX[11], 0.5f);
 
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOMap);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsMap.Length, vertsMap, BufferUsageHint.StaticDraw);
+            Vector3 offsetX = new Vector3(-(width / 2 + textPadding), height / 2 + textPadding, -(depth / 2 + textPadding));
+            Vector3 offsetY = new Vector3(width / 2 + textPadding, -(height / 2 + textPadding), -(depth / 2 + textPadding));
+            Vector3 offsetZ = new Vector3(width / 2 + textPadding, height / 2 + textPadding, depth / 2 + textPadding);
+            Vector3 offset0 = new Vector3(width / 2 + textPadding, height / 2 + textPadding, -(depth / 2 + textPadding));
 
-            shadMap.Use();
-
-            float polarDir = -1f;
-            var modelMap = Matrix4.Identity *
-                        Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians(-(AzimuthAngle + 90f))) *
-                        Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(polarDir * PolarAngle))
-                        ;
-            Matrix4 scaleMatr = Matrix4.CreateScale(1000/size.X, 1000/size.Y, 1);
-            modelMap = modelMap * scaleMatr;
-
-            Vector3 offset = new Vector3(0.75f, -0.75f, 0);
-            shadMap.SetMatrix4("model", modelMap);
-            shadMap.SetVector3("offset", offset);
-            GL.DrawElements(PrimitiveType.Lines, indsMap.Length, DrawElementsType.UnsignedInt, 0);
-
-
-
-            GL.BindVertexArray(VAOText);
-
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
-            GL.Enable(EnableCap.Blend);
-
-
-
-            Matrix4 textRot = Matrix4.Identity * 
-                              Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(PolarAngle)) *
-                              Matrix4.CreateRotationY((float)MathHelper.DegreesToRadians((AzimuthAngle + 90f)));
-
-            RenderText(vertsAxelTextX, textRot, modelMap, textPoints[0], offset);
-            RenderText(vertsAxelTextY, textRot, modelMap, textPoints[1], offset);
-            RenderText(vertsAxelTextZ, textRot, modelMap, textPoints[2], offset);
-
-            GL.Disable(EnableCap.Blend);
-
+            RenderAxelText(vertsTextX, textRot, offsetX, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+            RenderAxelText(vertsTextY, textRot, offsetY, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+            RenderAxelText(vertsTextZ, textRot, offsetZ, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+            RenderAxelText(vertsText0, textRot, offset0, cam.GetViewMatrix(), cam.GetProjectionMatrix());
 
             GL.Finish();
             GL.Enable(EnableCap.DepthTest);
@@ -453,26 +396,27 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
-        /// Render one quad with text texture
+        /// Renders text to the virtual space
         /// </summary>
-        /// <param name="textVerts">Quad vertices</param>
-        /// <param name="textRot">Rotation matrix for the text</param>
-        /// <param name="objRot">Rotation matrix for text and offset</param>
-        /// <param name="textOffset">Offset of the text from center</param>
-        /// <param name="objOffset">Offset of the whole object</param>
-        private void RenderText(float[] textVerts, Matrix4 textRot, Matrix4 objRot, Vector3 textOffset, Vector3 objOffset) {
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOText);
+        /// <param name="textVerts"> Vertices for the text and texture locations</param>
+        /// <param name="textRot"> Rotation of the text </param>
+        /// <param name="textOffset"> Offset of the text from point (0,0,0)</param>
+        /// <param name="view"> View matrix </param>
+        /// <param name="proj"> Proj matrix </param>
+        private void RenderAxelText(float[] textVerts, Matrix4 textRot, Vector3 textOffset, Matrix4 view, Matrix4 proj) {
+            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOAxelText);
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * textVerts.Length, textVerts, BufferUsageHint.StaticDraw);
 
             textTexture.Use(TextureUnit.Texture0);
 
-            shadText.Use();
+            shadAxelText.Use();
 
-            var modelText = textRot * Matrix4.CreateTranslation(textOffset) * objRot;
+            var modelText = textRot * Matrix4.CreateTranslation(textOffset);
 
-            shadText.SetMatrix4("model", modelText);
-            shadText.SetVector3("offset", objOffset);
+            shadAxelText.SetMatrix4("model", modelText);
+            shadAxelText.SetMatrix4("view", view);
+            shadAxelText.SetMatrix4("projection", proj);
+
 
             GL.DrawElements(PrimitiveType.Triangles, indsText.Length, DrawElementsType.UnsignedInt, 0);
         }
@@ -482,8 +426,10 @@ namespace OpenTKSlicingModule
         /// </summary>
         /// <param name="zoom">Added value to the current zoom percent value. </param>
         public void Zoom(float zoom) {
-            zoomPercent = MathHelper.Clamp(zoomPercent + zoom, 0.01f, 1.5f);
+            if (zoomPercent.Equals(0.01f)) zoomPercent = 0;
+            zoomPercent = MathHelper.Clamp(zoomPercent + zoom, 0.01f, 2f);
             cam.Fov = 60f*zoomPercent;
+            cam.Zoom = zoomPercent;
         }
 
         /// <summary>
@@ -527,22 +473,13 @@ namespace OpenTKSlicingModule
 
             mouseDeltaRot.start = mouseDeltaRot.end;
 
-            AzimuthAngle += deltaX;
-            PolarAngle += deltaY;
+            float a = (-deltaX * (MathF.PI)) / 180; 
+            float b = (-deltaY * (MathF.PI)) / 180;
 
-            float maxDist = MathF.Pow((DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight) * 0.25f, 0.5f);
-
-            float distance = maxDist * 1.5f;
-
-            float a = (PolarAngle * (MathF.PI)) / 180;
-            float b = (AzimuthAngle * (MathF.PI)) / 180;
-
-            float XRatio = MathF.Cos(a) * MathF.Cos(b);
-            float YRatio = MathF.Sin(a);
-            float ZRatio = MathF.Cos(a) * MathF.Sin(b);
-
-            Vector3 ratios = new Vector3(XRatio, YRatio, ZRatio);
-            cam.Position = (distance * ratios);
+            Quaternion quart = new Quaternion(cam.Right.X * b + a * cam.Up.X, cam.Right.Y * b + a * cam.Up.Y, cam.Right.Z * b + a * cam.Up.Z);
+            Vector3 transformVect = Vector3.Transform(cam.Position, quart);
+            Rots = quart * Rots;
+            cam.Position = transformVect;
         }
 
         /// <summary>
@@ -567,13 +504,15 @@ namespace OpenTKSlicingModule
 
             mouseDeltaPan.start = mouseDeltaPan.end;
 
+            float maxDist = MathF.Pow((DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight) * 0.25f, 0.5f) * 3;
+
             Vector3 sizeMult = new Vector3(DataWidth/100, DataHeight/100, DataDepth/100);
             Vector3 temp = cam.offset;
             cam.offset += (cam.Up * deltaY) * sizeMult;
             cam.offset += (cam.Right * deltaX) * sizeMult;
-            if (MathF.Abs(cam.offset.X) > DataWidth / 2f ||
-               MathF.Abs(cam.offset.Y) > DataHeight / 2f ||
-               MathF.Abs(cam.offset.Z) > DataDepth / 2f) cam.offset = temp;
+            if (MathF.Abs(cam.offset.X) > maxDist ||
+               MathF.Abs(cam.offset.Y) > maxDist ||
+               MathF.Abs(cam.offset.Z) > maxDist) cam.offset = temp;
         }
 
         /// <summary>
@@ -586,13 +525,7 @@ namespace OpenTKSlicingModule
             float h = DataHeight / 2;
             float d = DataDepth / 2;
 
-            float a = (PolarAngle * (MathF.PI)) / 180;
-            float b = (AzimuthAngle * (MathF.PI)) / 180;
-
-            float XRatio = MathF.Cos(a) * MathF.Cos(b);
-            float YRatio = MathF.Sin(a);
-            float ZRatio = MathF.Cos(a) * MathF.Sin(b);
-            Vector3 vec = new Vector3(XRatio, YRatio, ZRatio);
+            Vector3 vec = cam.Position.Normalized();
 
             /*piste = n * vec;
             kohtisuora = piste - (w, h, d);
@@ -605,8 +538,9 @@ namespace OpenTKSlicingModule
             Itseisarvojen avulla saadaan ratkaistua symmetrisyyksien takia kaikki mahdolliset kulmat, eikä 
             vain oikean etu ylä kahdenneksen tapaukset*/
 
-            float n = (w * MathF.Abs(vec.X) + h * MathF.Abs(vec.Y) + d * MathF.Abs(vec.Z)) / (vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
-            int distance = (int) (n * vec).Length;
+            float n = (w * MathF.Abs(vec.X) + h * MathF.Abs(vec.Y) + d * MathF.Abs(vec.Z)) / 
+                      (vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
+            int distance = (int)n;
 
             return distance;
 
@@ -623,6 +557,14 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
+        /// Sets if the projection should be orthogonal. If not we use perspective
+        /// </summary>
+        /// <param name="orth"></param>
+        public void SetOrtho(bool orth) {
+            cam.IsOrthographic = orth;
+        }
+
+        /// <summary>
         /// Resizes the viewport and changes cam aspects accordingly
         /// </summary>
         /// <param name="width">Width of viewport</param>
@@ -633,6 +575,7 @@ namespace OpenTKSlicingModule
             GL.Viewport(0, 0, width, height);
             cam.AspectRatio = (float) width / (float) height;
             size = new Vector2(width, height);
+            cam.ViewSize = size;
         } 
     }
 }

@@ -52,6 +52,19 @@ namespace OpenTKSlicingModule
                 CreateScene();
             }
         }
+
+        private bool _isOrtho = true;
+        public bool IsOrthographic
+        {
+            get => _isOrtho;
+            set
+            {
+                _isOrtho = value;
+                scene.SetOrtho(value);
+            }
+        }
+
+        
         // Dependency properties for future
         /*public int MapWidth
         {
@@ -80,7 +93,7 @@ namespace OpenTKSlicingModule
         public static readonly DependencyProperty MapDepthProperty =
             DependencyProperty.Register("MapDepth", typeof(int), typeof(VolumeViewer));*/
 
-        private Scene scene; //= new Scene(1, 1, 1, Convert.ToInt32(Opent), Convert.ToInt32(VolumeViewer.HeightProperty));
+        private Scene scene;
 
         /// <summary>
         /// Setuping OpenGL for GlWPFControl
@@ -95,8 +108,8 @@ namespace OpenTKSlicingModule
                 MinorVersion = 6
             };
             OpenTkControl.Start(settings);
-
-            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToInt32(OpenTkControl.ActualWidth), Convert.ToInt32(OpenTkControl.ActualHeight));
+            
+            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToInt32(OpenTkControl.ActualWidth), Convert.ToInt32(OpenTkControl.ActualHeight), IsOrthographic);
         }
 
         /// <summary>
@@ -195,6 +208,8 @@ namespace OpenTKSlicingModule
                 if (e.Delta > 0) SliceDepthSlider.Value -= 1;
                 else if (e.Delta < 0) SliceDepthSlider.Value += 1;
             }
+            string text = (scene.zoomPercent * 100f).ToString("0");
+            ZoomText.Text = "Zoom: " + text + "%";
         }
 
         /// <summary>
@@ -232,7 +247,7 @@ namespace OpenTKSlicingModule
         /// Creates new scene and sets the slice depth slider values accordingly
         /// </summary>
         private void CreateScene() {
-            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToInt32(OpenTkControl.ActualWidth), Convert.ToInt32(OpenTkControl.ActualHeight));
+            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToInt32(OpenTkControl.ActualWidth), Convert.ToInt32(OpenTkControl.ActualHeight), IsOrthographic);
             double dist = Convert.ToDouble(scene.GetDiagonalLength());
             SliceDepthSlider.Maximum = dist;
             SliceDepthSlider.Minimum = -dist;

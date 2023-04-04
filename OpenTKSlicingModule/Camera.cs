@@ -66,7 +66,7 @@ namespace OpenTKSlicingModule
             get => MathHelper.RadiansToDegrees(_fov);
             set
             {
-                var angle = MathHelper.Clamp(value, 0.00001f, 179f);
+                var angle = MathHelper.Clamp(value, 0.00001f, 135f);
                 _fov = MathHelper.DegreesToRadians(angle);
             }
         }

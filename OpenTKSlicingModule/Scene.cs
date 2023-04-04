@@ -70,20 +70,6 @@ namespace OpenTKSlicingModule
                                 22, 23
         };
 
-        private uint[] inds2 = { 0, 1,
-                            1, 2,
-                            2, 3,
-                            3, 0,
-                            4, 5,
-                            5, 6,
-                            6, 7,
-                            7, 4,
-                            0, 4,
-                            1, 5,
-                            2, 6,
-                            3, 7
-        };
-
         private float[] vertsSq = new float[]{
                           -MathF.Pow(3 * 0.125f, 1f/3f), MathF.Pow(3 * 0.125f, 1f/3f), 0f,
                           MathF.Pow(3 * 0.125f, 1f/3f), MathF.Pow(3 * 0.125f, 1f/3f), 0f,
@@ -123,7 +109,7 @@ namespace OpenTKSlicingModule
 
         private Shader shadSq;
 
-        public float zoomPercent = 1.0f;
+        private int zoomPercent = 100;
 
         private Camera cam = new Camera(Vector3.UnitZ * 3, 2, true);
 
@@ -219,7 +205,7 @@ namespace OpenTKSlicingModule
             mouseMult.Y = 1620f / ((float)winHeight);
             size = new Vector2(winWidth, winHeight);
             cam.ViewSize = size;
-            cam.Zoom = zoomPercent;
+            cam.Zoom = (float) zoomPercent / 100f;
 
             DataDepth = depth;
             DataHeight = height;
@@ -353,7 +339,6 @@ namespace OpenTKSlicingModule
 
 
 
-
             GL.BindVertexArray(VAOSq);
 
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
@@ -424,12 +409,23 @@ namespace OpenTKSlicingModule
         /// <summary>
         /// Widen or narrow the FOV to change zoom
         /// </summary>
-        /// <param name="zoom">Added value to the current zoom percent value. </param>
-        public void Zoom(float zoom) {
-            if (zoomPercent.Equals(0.01f)) zoomPercent = 0;
-            zoomPercent = MathHelper.Clamp(zoomPercent + zoom, 0.01f, 2f);
-            cam.Fov = 60f*zoomPercent;
-            cam.Zoom = zoomPercent;
+        /// <param name="zoom"> Zoom amount. The zooming is done on dynamic scale, so the value should be +1 and -1 on default. Meaning a one increment
+        /// or decrement on a dynamic scale. </param>
+        public void Zoom(int zoom) {
+
+            int multiplier = 100;
+            if (zoomPercent + zoom > 10000) multiplier = 10000;
+            else if (zoomPercent + zoom >= 1000 && zoomPercent + zoom <= 10000) multiplier = 1000;
+            else if (zoomPercent + zoom <= 100) multiplier = 10;
+
+            zoomPercent = MathHelper.Clamp(zoom * multiplier + zoomPercent, 10, 50000);
+
+            cam.Fov = 60f * 100 / (float)zoomPercent;
+            cam.Zoom = 100 / (float) zoomPercent;
+        }
+
+        public int GetZoomLevel() {
+            return zoomPercent;
         }
 
         /// <summary>
@@ -506,10 +502,12 @@ namespace OpenTKSlicingModule
 
             float maxDist = MathF.Pow((DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight) * 0.25f, 0.5f) * 3;
 
+            float zoomMultiplier = MathF.Sqrt(100f / (float) zoomPercent);
+
             Vector3 sizeMult = new Vector3(DataWidth/100, DataHeight/100, DataDepth/100);
             Vector3 temp = cam.offset;
-            cam.offset += (cam.Up * deltaY) * sizeMult;
-            cam.offset += (cam.Right * deltaX) * sizeMult;
+            cam.offset += (cam.Up * deltaY) * sizeMult * zoomMultiplier;
+            cam.offset += (cam.Right * deltaX) * sizeMult * zoomMultiplier;
             if (MathF.Abs(cam.offset.X) > maxDist ||
                MathF.Abs(cam.offset.Y) > maxDist ||
                MathF.Abs(cam.offset.Z) > maxDist) cam.offset = temp;
@@ -570,8 +568,8 @@ namespace OpenTKSlicingModule
         /// <param name="width">Width of viewport</param>
         /// <param name="height">Heigth of viewport</param>
         public void Resize(int width, int height) {
-            mouseMult.X = 1.5f * 2880f / ((float)width);
-            mouseMult.Y = 1.5f * 2880f / ((float)height);
+            mouseMult.X = 6284f / ((float)width); // Pi * 2 * 1000 aprox 6284f
+            mouseMult.Y = 6284f / ((float)height);
             GL.Viewport(0, 0, width, height);
             cam.AspectRatio = (float) width / (float) height;
             size = new Vector2(width, height);

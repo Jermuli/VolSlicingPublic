@@ -195,8 +195,8 @@ namespace OpenTKSlicingModule
         {
             if (Keyboard.IsKeyDown(Key.LeftCtrl))
             {
-                if (e.Delta > 0) scene.Zoom(-0.05f);
-                else if (e.Delta < 0) scene.Zoom(0.05f);
+                if (e.Delta > 0) scene.Zoom(1);
+                else if (e.Delta < 0) scene.Zoom(-1);
             }
             else if (Keyboard.IsKeyDown(Key.LeftShift))
             {
@@ -208,7 +208,7 @@ namespace OpenTKSlicingModule
                 if (e.Delta > 0) SliceDepthSlider.Value -= 1;
                 else if (e.Delta < 0) SliceDepthSlider.Value += 1;
             }
-            string text = (scene.zoomPercent * 100f).ToString("0");
+            string text = (scene.GetZoomLevel()).ToString("0");
             ZoomText.Text = "Zoom: " + text + "%";
         }
 

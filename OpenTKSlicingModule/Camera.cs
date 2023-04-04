@@ -84,8 +84,10 @@ namespace OpenTKSlicingModule
         // Get the projection matrix using the same method we have used up until this point
         public Matrix4 GetProjectionMatrix()
         {
-            if(IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X*Zoom*7, ViewSize.Y*Zoom*7 ,1f, farClipPlane);
-            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane); //Update far plane to change according to space
+            if (IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X * Zoom * 7, ViewSize.Y * Zoom * 7, 1f, farClipPlane);
+            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane);
+            /*if(IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X*Zoom*7, ViewSize.Y*Zoom*7 ,1f, farClipPlane);
+            return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane);*/
         }
 
         public void SetClipPlane(float plane) {

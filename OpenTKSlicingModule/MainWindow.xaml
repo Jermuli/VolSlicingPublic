@@ -5,10 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:OpenTKSlicingModule"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="600" Width="600">
     <Grid>
         <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
-            <local:VolumeViewer MapWidth="700" MapHeight="700" MapDepth="400" IsOrthographic="True"/>
+            <local:VolumeViewer MapWidth="700" MapHeight="700" MapDepth="4000" IsOrthographic="True"/>
         </Border>
     </Grid>
 </Window>

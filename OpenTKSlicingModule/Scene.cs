@@ -420,7 +420,7 @@ namespace OpenTKSlicingModule
 
             zoomPercent = MathHelper.Clamp(zoom * multiplier + zoomPercent, 10, 50000);
 
-            cam.Fov = 60f * 100 / (float)zoomPercent;
+            cam.Fov = 18f * 100 / (float)zoomPercent;
             cam.Zoom = 100 / (float) zoomPercent;
         }
 

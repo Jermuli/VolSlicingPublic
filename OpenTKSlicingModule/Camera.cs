@@ -14,7 +14,7 @@ namespace OpenTKSlicingModule
 
         private Vector3 _right = Vector3.UnitX;
 
-        private float _fov = MathHelper.PiOver2*2/3;
+        private float _fov = MathHelper.DegreesToRadians(18f);
 
         /// <summary>
         /// Constructor for the cam class
@@ -66,7 +66,7 @@ namespace OpenTKSlicingModule
             get => MathHelper.RadiansToDegrees(_fov);
             set
             {
-                var angle = MathHelper.Clamp(value, 1f, 90f);
+                var angle = MathHelper.Clamp(value, 0.00001f, 179f);
                 _fov = MathHelper.DegreesToRadians(angle);
             }
         }

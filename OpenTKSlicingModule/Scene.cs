@@ -54,7 +54,7 @@ namespace OpenTKSlicingModule
 
                           -0.5f, 0.5f, -0.5f,       1.0f, 1.0f, 1.0f,
                           -0.5f, 0.5f, 0.5f,        1.0f, 1.0f, 1.0f
-        };       
+        };
 
         private uint[] inds = { 0, 1,
                                 2, 3,
@@ -135,6 +135,8 @@ namespace OpenTKSlicingModule
 
         private Quaternion Rots = new Quaternion(0, 0, 0);
 
+        private Vector3 RotatedOffset = new Vector3(0, 0, 0);
+
         private int SliceDepth = 0;
 
         public int DataWidth = 1;
@@ -151,9 +153,11 @@ namespace OpenTKSlicingModule
         /// <param name="depth">Depth of the vol data</param>
         /// <param name="winWidth">Width of the openTK control window</param>
         /// <param name="winHeight">Height of the openTK control window</param>
-        public Scene(int width, int height, int depth, int winWidth, int winHeight, bool isOrtho) {
+        public Scene(int width, int height, int depth, float winWidth, float winHeight, bool isOrtho)
+        {
 
             cam.IsOrthographic = isOrtho;
+            cam.sizeMult = (MathF.Sqrt(width * width + depth * depth + height * height)) / width; 
 
             float textBaseSize = MathF.Pow(width * width + height * height, 0.5f) * 0.05f;
 
@@ -190,14 +194,14 @@ namespace OpenTKSlicingModule
                 textTextureVerts[i][11] = textH * textBaseSize / 2;
                 textTextureVerts[i][12] = 0;
 
-                textTextureVerts[i][13] = textures[i].X ;
+                textTextureVerts[i][13] = textures[i].X;
                 textTextureVerts[i][14] = textures[i].Y;
 
                 textTextureVerts[i][15] = textW * textBaseSize / 2;
                 textTextureVerts[i][16] = -textH * textBaseSize / 2;
                 textTextureVerts[i][17] = 0;
 
-                textTextureVerts[i][18] = textures[i].X ;
+                textTextureVerts[i][18] = textures[i].X;
                 textTextureVerts[i][19] = textures[i].Y - textureH;
             }
 
@@ -205,13 +209,13 @@ namespace OpenTKSlicingModule
             mouseMult.Y = 1620f / ((float)winHeight);
             size = new Vector2(winWidth, winHeight);
             cam.ViewSize = size;
-            cam.Zoom = (float) zoomPercent / 100f;
+            cam.Zoom = (float)zoomPercent / 100f;
 
             DataDepth = depth;
             DataHeight = height;
             DataWidth = width;
 
-            for(int i = 0; i < verts.Length; i += 6)
+            for (int i = 0; i < verts.Length; i += 6)
             {
                 verts[i] = verts[i] * width;
                 verts[i + 1] = verts[i + 1] * height;
@@ -227,7 +231,7 @@ namespace OpenTKSlicingModule
                           -maxDist, -maxDist, SliceDepth
             };
 
-            float distance = maxDist * 5f;
+            float distance = maxDist * 9f; //5f
 
             float a = (0 * (MathF.PI)) / 180;
             float b = (-90f * (MathF.PI)) / 180;
@@ -388,7 +392,8 @@ namespace OpenTKSlicingModule
         /// <param name="textOffset"> Offset of the text from point (0,0,0)</param>
         /// <param name="view"> View matrix </param>
         /// <param name="proj"> Proj matrix </param>
-        private void RenderAxelText(float[] textVerts, Matrix4 textRot, Vector3 textOffset, Matrix4 view, Matrix4 proj) {
+        private void RenderAxelText(float[] textVerts, Matrix4 textRot, Vector3 textOffset, Matrix4 view, Matrix4 proj)
+        {
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBOAxelText);
             GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * textVerts.Length, textVerts, BufferUsageHint.StaticDraw);
 
@@ -402,7 +407,6 @@ namespace OpenTKSlicingModule
             shadAxelText.SetMatrix4("view", view);
             shadAxelText.SetMatrix4("projection", proj);
 
-
             GL.DrawElements(PrimitiveType.Triangles, indsText.Length, DrawElementsType.UnsignedInt, 0);
         }
 
@@ -411,7 +415,8 @@ namespace OpenTKSlicingModule
         /// </summary>
         /// <param name="zoom"> Zoom amount. The zooming is done on dynamic scale, so the value should be +1 and -1 on default. Meaning a one increment
         /// or decrement on a dynamic scale. </param>
-        public void Zoom(int zoom) {
+        public void Zoom(int zoom)
+        {
 
             int multiplier = 100;
             if (zoomPercent + zoom > 10000) multiplier = 10000;
@@ -420,11 +425,12 @@ namespace OpenTKSlicingModule
 
             zoomPercent = MathHelper.Clamp(zoom * multiplier + zoomPercent, 10, 50000);
 
-            cam.Fov = 18f * 100 / (float)zoomPercent;
-            cam.Zoom = 100 / (float) zoomPercent;
+            cam.Fov = 13.5f * 100 / (float)zoomPercent;
+            cam.Zoom = 100 / (float)zoomPercent;
         }
 
-        public int GetZoomLevel() {
+        public int GetZoomLevel()
+        {
             return zoomPercent;
         }
 
@@ -435,7 +441,8 @@ namespace OpenTKSlicingModule
         /// <param name="width">Width of the data.</param>
         /// <param name="height">Heigth of the data</param>
         /// <param name="depth">Depth of the data</param>
-        public void MoveSlice(int amount, int width, int height, int depth) {
+        public void MoveSlice(int amount, int width, int height, int depth)
+        {
             SliceDepth = -amount;
 
             float maxDist = MathF.Pow((depth * depth + width * width + height * height) * 0.25f, 0.5f);
@@ -452,7 +459,8 @@ namespace OpenTKSlicingModule
         /// Starts tracking mouse movements for rotating the arcball camera
         /// </summary>
         /// <param name="start">Starting mousePoint</param>
-        public void MouseDownRot(Vector2 start) {
+        public void MouseDownRot(Vector2 start)
+        {
             mouseDeltaRot.start = start;
         }
 
@@ -460,7 +468,8 @@ namespace OpenTKSlicingModule
         /// Changes the position of the camera according to the mouse movement changes. 
         /// </summary>
         /// <param name="end">Mouse end point</param>
-        public void MouseMoveRot(Vector2 end) {
+        public void MouseMoveRot(Vector2 end)
+        {
             mouseDeltaRot.end = end;
 
 
@@ -469,13 +478,14 @@ namespace OpenTKSlicingModule
 
             mouseDeltaRot.start = mouseDeltaRot.end;
 
-            float a = (-deltaX * (MathF.PI)) / 180; 
+            float a = (-deltaX * (MathF.PI)) / 180;
             float b = (-deltaY * (MathF.PI)) / 180;
 
             Quaternion quart = new Quaternion(cam.Right.X * b + a * cam.Up.X, cam.Right.Y * b + a * cam.Up.Y, cam.Right.Z * b + a * cam.Up.Z);
             Vector3 transformVect = Vector3.Transform(cam.Position, quart);
             Rots = quart * Rots;
             cam.Position = transformVect;
+            RotatedOffset = cam.offset;
         }
 
         /// <summary>
@@ -495,29 +505,43 @@ namespace OpenTKSlicingModule
         {
             mouseDeltaPan.end = end;
 
-            float deltaX = -(float)(mouseDeltaPan.end.X - mouseDeltaPan.start.X) * deltaTime * mouseMult.X;
-            float deltaY = (float)(mouseDeltaPan.end.Y - mouseDeltaPan.start.Y) * deltaTime * mouseMult.Y;
+            float deltaX = -(float)(mouseDeltaPan.end.X - mouseDeltaPan.start.X);
+            float deltaY = (float)(mouseDeltaPan.end.Y - mouseDeltaPan.start.Y);
+
+            Vector3 temp = cam.offset;
+
+            if (cam.IsOrthographic) {
+                float fovMultiplier = cam.sizeMult * 100f / (float)zoomPercent;
+                cam.offset += (cam.Up * deltaY) * fovMultiplier;
+                cam.offset += (cam.Right * deltaX) * fovMultiplier;
+            } 
+            else {
+
+                float screenX = deltaX / size.X;
+                float screenY = deltaY / size.Y;
+                float spaceRatio = 2f * MathF.Tan(MathHelper.DegreesToRadians(cam.Fov / 2f)) * ((cam.Position + RotatedOffset).Length + (float)SliceDepth);
+                float spaceX = screenX * spaceRatio;
+                float spaceY = screenY * spaceRatio;
+                cam.offset += (cam.Up * spaceY);
+                cam.offset += (cam.Right * spaceX * cam.GetAspectRatio());
+            }
 
             mouseDeltaPan.start = mouseDeltaPan.end;
 
-            float maxDist = MathF.Pow((DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight) * 0.25f, 0.5f) * 3;
-
-            float zoomMultiplier = MathF.Sqrt(100f / (float) zoomPercent);
-
-            Vector3 sizeMult = new Vector3(DataWidth/100, DataHeight/100, DataDepth/100);
-            Vector3 temp = cam.offset;
-            cam.offset += (cam.Up * deltaY) * sizeMult * zoomMultiplier;
-            cam.offset += (cam.Right * deltaX) * sizeMult * zoomMultiplier;
+            float maxDist = MathF.Pow((DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight) * 0.25f, 0.5f) * 6;
             if (MathF.Abs(cam.offset.X) > maxDist ||
-               MathF.Abs(cam.offset.Y) > maxDist ||
-               MathF.Abs(cam.offset.Z) > maxDist) cam.offset = temp;
+                MathF.Abs(cam.offset.Y) > maxDist ||
+                MathF.Abs(cam.offset.Z) > maxDist) {
+                    cam.offset = temp;
+            } 
         }
 
         /// <summary>
         /// Gets the maximum values for visible slice for the vol data from the current viewpoint.
         /// </summary>
         /// <returns>The amount slice can move from the center position to positive or negative direction. </returns>
-        public int GetDiagonalLength() {
+        public int GetDiagonalLength()
+        {
 
             float w = DataWidth / 2;
             float h = DataHeight / 2;
@@ -536,7 +560,7 @@ namespace OpenTKSlicingModule
             Itseisarvojen avulla saadaan ratkaistua symmetrisyyksien takia kaikki mahdolliset kulmat, eikä 
             vain oikean etu ylä kahdenneksen tapaukset*/
 
-            float n = (w * MathF.Abs(vec.X) + h * MathF.Abs(vec.Y) + d * MathF.Abs(vec.Z)) / 
+            float n = (w * MathF.Abs(vec.X) + h * MathF.Abs(vec.Y) + d * MathF.Abs(vec.Z)) /
                       (vec.X * vec.X + vec.Y * vec.Y + vec.Z * vec.Z);
             int distance = (int)n;
 
@@ -550,15 +574,18 @@ namespace OpenTKSlicingModule
         /// <summary>
         /// Resets cam offset
         /// </summary>
-        public void ResetOffset() {
-            cam.offset = new Vector3(0f,0f,0f);
+        public void ResetOffset()
+        {
+            cam.offset = new Vector3(0f, 0f, 0f);
+            RotatedOffset = new Vector3(0f, 0f, 0f);
         }
 
         /// <summary>
         /// Sets if the projection should be orthogonal. If not we use perspective
         /// </summary>
         /// <param name="orth"></param>
-        public void SetOrtho(bool orth) {
+        public void SetOrtho(bool orth)
+        {
             cam.IsOrthographic = orth;
         }
 
@@ -567,13 +594,15 @@ namespace OpenTKSlicingModule
         /// </summary>
         /// <param name="width">Width of viewport</param>
         /// <param name="height">Heigth of viewport</param>
-        public void Resize(int width, int height) {
+        public void Resize(float width, float height)
+        {
             mouseMult.X = 6284f / ((float)width); // Pi * 2 * 1000 aprox 6284f
             mouseMult.Y = 6284f / ((float)height);
-            GL.Viewport(0, 0, width, height);
-            cam.AspectRatio = (float) width / (float) height;
+            GL.Viewport(0, 0, Convert.ToInt32(width), Convert.ToInt32(height));
+            cam.AspectRatio = (float)width / (float)height;
             size = new Vector2(width, height);
             cam.ViewSize = size;
-        } 
+            cam.sizeMult = (MathF.Sqrt(DataWidth * DataWidth + DataDepth * DataDepth + DataHeight * DataHeight)) / width;
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace OpenTKSlicingModule
 
         private Vector3 _right = Vector3.UnitX;
 
-        private float _fov = MathHelper.DegreesToRadians(18f);
+        private float _fov = MathHelper.DegreesToRadians(13.5f);
 
         /// <summary>
         /// Constructor for the cam class
@@ -28,16 +28,17 @@ namespace OpenTKSlicingModule
             IsOrthographic = orth;
         }
 
-        private Vector3 _pos = (0f,0f,0f);
+        private Vector3 _pos = (0f, 0f, 0f);
 
         // The position of the camera
-        public Vector3 Position { 
+        public Vector3 Position
+        {
             get => _pos;
-            set 
+            set
             {
                 _pos = value;
                 UpdateVectors();
-            } 
+            }
         }
 
         // This is simply the aspect ratio of the viewport, used for the projection matrix.
@@ -55,7 +56,7 @@ namespace OpenTKSlicingModule
 
         public Vector3 Right => _right;
 
-        public Vector3 InvUp = (0, 1f, 0);
+        public float sizeMult = 1f;
 
         // The field of view (FOV) is the vertical angle of the camera view.
         // This has been discussed more in depth in a previous tutorial,
@@ -84,16 +85,21 @@ namespace OpenTKSlicingModule
         // Get the projection matrix using the same method we have used up until this point
         public Matrix4 GetProjectionMatrix()
         {
-            if (IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X * Zoom * 7, ViewSize.Y * Zoom * 7, 1f, farClipPlane);
+            if (IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X * Zoom * sizeMult, ViewSize.Y * Zoom * sizeMult, 1f, farClipPlane); //*7
             return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane);
             /*if(IsOrthographic) return Matrix4.CreateOrthographic(ViewSize.X*Zoom*7, ViewSize.Y*Zoom*7 ,1f, farClipPlane);
             return Matrix4.CreatePerspectiveFieldOfView(_fov, AspectRatio, 1f, farClipPlane);*/
         }
 
-        public void SetClipPlane(float plane) {
+        public void SetClipPlane(float plane)
+        {
             farClipPlane = plane;
         }
 
+        public float GetAspectRatio()
+        {
+            return AspectRatio;
+        }
 
         // This function is going to update the direction vertices using some of the math learned in the web tutorials.
         private void UpdateVectors()

@@ -8,7 +8,7 @@
         Title="MainWindow" Height="600" Width="600">
     <Grid>
         <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
-            <local:VolumeViewer MapWidth="700" MapHeight="700" MapDepth="4000" IsOrthographic="True"/>
+            <local:VolumeViewer MapWidth="1000" MapHeight="2000" MapDepth="3000" IsOrthographic="True"/>
         </Border>
     </Grid>
 </Window>

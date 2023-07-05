@@ -8,7 +8,18 @@
         Title="MainWindow" Height="600" Width="600">
     <Grid>
         <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1">
-            <local:VolumeViewer MapWidth="1000" MapHeight="2000" MapDepth="3000" IsOrthographic="True"/>
+            <local:VolumeViewer x:Name="VolViewer" MapWidth="722" MapHeight="731" MapDepth="5000" IsOrthographic="True" IsRaw="True" 
+                                ByteDepth="2" IsBigEndian="False" Filepath="C:\Users\jpakkane\Desktop\temp\MGKU2_16bitU_100um_722x731x5000.raw"
+                                />
+            <!--local:VolumeViewer x:Name="VolViewer" MapWidth="256" MapHeight="256" MapDepth="129" IsOrthographic="True" IsRaw="True" 
+                                ByteDepth="2" IsBigEndian="True" Filepath="C:\Users\jpakkane\Desktop\temp\t1-head256x256x129.raw"
+                                NormalMax="0.02" NormalMin="0"/-->
+            <!--local:VolumeViewer x:Name="VolViewer" MapWidth="186" MapHeight="226" MapDepth="27" IsOrthographic="True"
+                                Filepath="C:\Users\jpakkane\Desktop\temp\mri-raw-rest186 226 27.raw"
+                                /-->
+            <!--local:VolumeViewer x:Name="VolViewer" MapWidth="722" MapHeight="731" MapDepth="40024" IsOrthographic="True" IsRaw="True" 
+                                ByteDepth="2" IsBigEndian="False" Filepath="C:\Users\jpakkane\Desktop\temp\MGKU2_16bitU_100um_722x731x40024.raw"
+                                /-->
         </Border>
     </Grid>
 </Window>

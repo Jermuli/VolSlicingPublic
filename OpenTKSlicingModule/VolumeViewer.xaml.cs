@@ -53,6 +53,50 @@ namespace OpenTKSlicingModule
             }
         }
 
+        private int _byteDepth = 1;
+        public int ByteDepth
+        {
+            get => _byteDepth;
+            set
+            {
+                _byteDepth = value;
+                scene.SetByteDepth(value);
+            }
+        }
+
+        private float _normMin = 0.0f;
+        public float NormalMin
+        {
+            get => _normMin;
+            set
+            {
+                _normMin = value;
+                scene.SetNormMin(value);
+            }
+        }
+
+        private float _normMax = 1.0f;
+        public float NormalMax
+        {
+            get => _normMax;
+            set
+            {
+                _normMax = value;
+                scene.SetNormMax(value);
+            }
+        }
+
+        private string _filepath = @" ";
+        public string Filepath
+        {
+            get => _filepath;
+            set
+            {
+                _filepath = value;
+                scene.SetFilepath(value);
+            }
+        }
+
         private bool _isOrtho = true;
         public bool IsOrthographic
         {
@@ -64,7 +108,28 @@ namespace OpenTKSlicingModule
             }
         }
 
-        
+        private bool _isBigEnd = true;
+        public bool IsBigEndian
+        {
+            get => _isBigEnd;
+            set
+            {
+                _isBigEnd = value;
+                scene.SetEndian(value);
+            }
+        }
+
+        private bool _isRaw = true;
+        public bool IsRaw
+        {
+            get => _isRaw;
+            set
+            {
+                _isRaw = value;
+                scene.SetRaw(value);
+            }
+        }
+
         // Dependency properties for future
         /*public int MapWidth
         {
@@ -109,7 +174,9 @@ namespace OpenTKSlicingModule
             };
             OpenTkControl.Start(settings);
             
-            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToSingle(OpenTkControl.ActualWidth), Convert.ToSingle(OpenTkControl.ActualHeight), IsOrthographic);
+            scene = new Scene(MapWidth, MapHeight, MapDepth, _byteDepth, Convert.ToSingle(OpenTkControl.ActualWidth),
+                              Convert.ToSingle(OpenTkControl.ActualHeight), _normMin, _normMax, _filepath, IsOrthographic,
+                              IsBigEndian, IsRaw);
         }
 
         /// <summary>
@@ -247,10 +314,20 @@ namespace OpenTKSlicingModule
         /// Creates new scene and sets the slice depth slider values accordingly
         /// </summary>
         private void CreateScene() {
-            scene = new Scene(MapWidth, MapHeight, MapDepth, Convert.ToSingle(OpenTkControl.ActualWidth), Convert.ToSingle(OpenTkControl.ActualHeight), IsOrthographic);
+            scene = new Scene(MapWidth, MapHeight, MapDepth, _byteDepth, Convert.ToSingle(OpenTkControl.ActualWidth), 
+                              Convert.ToSingle(OpenTkControl.ActualHeight), _normMin, _normMax, _filepath, IsOrthographic, 
+                              IsBigEndian, IsRaw);
             double dist = Convert.ToDouble(scene.GetDiagonalLength());
             SliceDepthSlider.Maximum = dist;
             SliceDepthSlider.Minimum = -dist;
+        }
+
+        /// <summary>
+        /// Returns the file
+        /// </summary>
+        /// <returns>String containing the slice status message</returns>
+        public string GetSliceStatus() {
+            return scene.GetSliceStatus();
         }
     }
 }

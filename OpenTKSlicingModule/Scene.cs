@@ -16,6 +16,12 @@ namespace OpenTKSlicingModule
         /// </summary>
         #region Variables
 
+        private Vector3 CamOrientation = (0, 1, 0);
+
+        private SliceImage Image;
+
+        private int SliceImageHandle;
+
         private float[] verts = {
                           -0.5f,  0.5f, -0.5f,      1.0f, 0.0f, 0.0f, //X R
                           0.5f,  0.5f, -0.5f,       1.0f, 0.0f, 0.0f,
@@ -70,12 +76,7 @@ namespace OpenTKSlicingModule
                                 22, 23
         };
 
-        private float[] vertsSq = new float[]{
-                          -MathF.Pow(3 * 0.125f, 1f/3f), MathF.Pow(3 * 0.125f, 1f/3f), 0f,
-                          MathF.Pow(3 * 0.125f, 1f/3f), MathF.Pow(3 * 0.125f, 1f/3f), 0f,
-                          MathF.Pow(3 * 0.125f, 1f/3f),  -MathF.Pow(3 * 0.125f, 1f/3f), 0f,
-                          -MathF.Pow(3 * 0.125f, 1f/3f), -MathF.Pow(3 * 0.125f, 1f/3f), 0f
-        };
+        private float[][] vertsSq = new float[0][];
 
         private uint[] indsSq = { 0, 1, 2,
                                   0, 3, 2
@@ -142,6 +143,8 @@ namespace OpenTKSlicingModule
         public int DataWidth = 1;
         public int DataHeight = 1;
         public int DataDepth = 1;
+        public double NormalizationMax = 1;
+        public double NormalizationMin = 0.0;
         #endregion
 
         /// <summary>
@@ -153,11 +156,11 @@ namespace OpenTKSlicingModule
         /// <param name="depth">Depth of the vol data</param>
         /// <param name="winWidth">Width of the openTK control window</param>
         /// <param name="winHeight">Height of the openTK control window</param>
-        public Scene(int width, int height, int depth, float winWidth, float winHeight, bool isOrtho)
+        public Scene(int width, int height, int depth, int bDepth, float winWidth, float winHeight, float normMin, float normMax, string filepath, bool isOrtho, bool bigEnd, bool isRaw)
         {
 
             cam.IsOrthographic = isOrtho;
-            cam.sizeMult = (MathF.Sqrt(width * width + depth * depth + height * height)) / width; 
+            cam.sizeMult = (MathF.Sqrt(width * width + depth * depth + height * height)) / width;
 
             float textBaseSize = MathF.Pow(width * width + height * height, 0.5f) * 0.05f;
 
@@ -222,16 +225,13 @@ namespace OpenTKSlicingModule
                 verts[i + 2] = verts[i + 2] * depth;
             }
 
-            float maxDist = MathF.Pow((depth * depth + width * width + height * height) * 0.25f, 0.5f);
 
-            vertsSq = new float[]{
-                          -maxDist, maxDist, SliceDepth,
-                          maxDist, maxDist, SliceDepth,
-                          maxDist,  -maxDist, SliceDepth,
-                          -maxDist, -maxDist, SliceDepth
-            };
+            int sliceW = MathHelper.NextPowerOfTwo(width);
+            int sliceH = MathHelper.NextPowerOfTwo(height);
+            float sliceVertW = (float)sliceW / 2f;
+            float sliceVertH = (float)sliceH / 2f;
 
-            float distance = maxDist * 9f; //5f
+            float distance = MathF.Pow((depth * depth + width * width + height * height) * 0.25f, 0.5f) * 9f;
 
             float a = (0 * (MathF.PI)) / 180;
             float b = (-90f * (MathF.PI)) / 180;
@@ -245,6 +245,28 @@ namespace OpenTKSlicingModule
 
             float ClipPlane = distance * 11;
             cam.SetClipPlane(ClipPlane);
+
+            int maxDist = (int)MathHelper.NextPowerOfTwo(MathF.Sqrt(depth * depth + width * width + height * height));
+
+            Image = new SliceImage(filepath, DataWidth, DataHeight, DataDepth, Rots, SliceDepth, isRaw, bigEnd, bDepth);
+
+            int max2 = Image.GetMaxDist() / 2;
+            int chunks = Image.GetChunksPerDim();
+            vertsSq = new float[chunks * chunks][];
+            for (int i = 0; i < chunks; i++)
+            {
+                for (int j = 0; j < chunks; j++)
+                {
+                    vertsSq[i * chunks + j] = new float[]{
+                          -max2+j*Image.ChunkSize,     max2-i*Image.ChunkSize,      0,      0f, 1f,
+                          -max2+(j+1)*Image.ChunkSize, max2-i*Image.ChunkSize,      0,      1f, 1f,
+                          -max2+(j+1)*Image.ChunkSize, max2-(i+1)*Image.ChunkSize,  0,      1f, 0f,
+                          -max2+j*Image.ChunkSize,     max2-(i+1)*Image.ChunkSize,  0,      0f, 0f
+                    };
+                }
+            }
+            CheckVisibleChunks();
+            Image.ChangeSliceRotations(Rots);
 
             GL.Enable(EnableCap.DepthTest);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
@@ -279,10 +301,13 @@ namespace OpenTKSlicingModule
 
             GL.BindVertexArray(VAOSq);
             GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq.Length, vertsSq, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq[0].Length, vertsSq[0], BufferUsageHint.StreamDraw);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
+
+            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
+            GL.EnableVertexAttribArray(1);
 
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBOSq);
             GL.BufferData(BufferTarget.ElementArrayBuffer, indsSq.Length * sizeof(uint), indsSq, BufferUsageHint.StaticDraw);
@@ -315,6 +340,13 @@ namespace OpenTKSlicingModule
 
             textTexture = Texture.LoadFromFile("Textures/Font.bmp");
             textTexture.Use(TextureUnit.Texture0);
+
+
+
+            SliceImageHandle = GL.GenTexture();
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);
         }
 
         /// <summary>
@@ -341,25 +373,54 @@ namespace OpenTKSlicingModule
 
             GL.DrawElements(PrimitiveType.Lines, inds.Length, DrawElementsType.UnsignedInt, 0);
 
+            PixelType format;
+            PixelInternalFormat internalFormat;
+            switch (Image.GetByteSize()) {
+                case 2:
+                    format = PixelType.UnsignedShort;
+                    internalFormat = PixelInternalFormat.R16;
+                    break;
 
+                case 4:
+                    format = PixelType.Float;
+                    internalFormat = PixelInternalFormat.R32f;
+                    break;
+                default:
+                    format = PixelType.UnsignedByte;
+                    internalFormat = PixelInternalFormat.R8;
+                    break;
+            }
 
-            GL.BindVertexArray(VAOSq);
-
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq.Length, vertsSq, BufferUsageHint.StaticDraw);
-
-            shadSq.Use();
             var modelSq = Matrix4.CreateFromQuaternion(Rots);
+            for (int i = 0; i < vertsSq.Length; i++) {
+                if (Image.ChunkVisibility[i])
+                {
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);
+                    GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Image.GetChunkSize(), Image.GetChunkSize(), 0, PixelFormat.Red, format, Image.GetSliceChunk(i));
 
-            shadSq.SetMatrix4("model", modelSq);
-            shadSq.SetMatrix4("view", cam.GetViewMatrix());
-            shadSq.SetMatrix4("projection", cam.GetProjectionMatrix());
-            Vector3 dimensions = new Vector3(width, height, depth) * 0.5f;
-            shadSq.SetVector3("CubeDims", dimensions);
+                    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+                    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
 
-            GL.DrawElements(PrimitiveType.Triangles, indsSq.Length, DrawElementsType.UnsignedInt, 0);
+                    GL.BindVertexArray(VAOSq);
 
+                    GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
+                    GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq[i].Length, vertsSq[i], BufferUsageHint.DynamicDraw);
 
+                    shadSq.Use();
+                    shadSq.SetMatrix4("model", modelSq);
+                    shadSq.SetMatrix4("view", cam.GetViewMatrix());
+                    shadSq.SetMatrix4("projection", cam.GetProjectionMatrix());
+                    Vector3 dimensions = new Vector3(width, height, depth) * 0.5f;
+                    shadSq.SetVector3("CubeDims", dimensions);
+                    float normMin = Convert.ToSingle(NormalizationMin);
+                    float normMax = Convert.ToSingle(NormalizationMax);
+                    shadSq.SetFloat("LvlMin", normMin);
+                    shadSq.SetFloat("LvlMax", normMax);
+
+                    GL.DrawElements(PrimitiveType.Triangles, indsSq.Length, DrawElementsType.UnsignedInt, 0);
+                }
+            }
 
             GL.BindVertexArray(VAOAxelText);
 
@@ -429,6 +490,10 @@ namespace OpenTKSlicingModule
             cam.Zoom = 100 / (float)zoomPercent;
         }
 
+        /// <summary>
+        /// Return the current zoom level
+        /// </summary>
+        /// <returns>current zoom level</returns>
         public int GetZoomLevel()
         {
             return zoomPercent;
@@ -445,14 +510,43 @@ namespace OpenTKSlicingModule
         {
             SliceDepth = -amount;
 
-            float maxDist = MathF.Pow((depth * depth + width * width + height * height) * 0.25f, 0.5f);
+            SetSliceVerts();
 
-            vertsSq = new float[]{
-                          -maxDist, maxDist, SliceDepth,
-                          maxDist, maxDist, SliceDepth,
-                          maxDist,  -maxDist, SliceDepth,
-                          -maxDist, -maxDist, SliceDepth
-            };
+            Image.ChangeSliceDepth(SliceDepth);
+        }
+
+        private void SetSliceVerts() {
+            for (int i = 0; i < vertsSq.Length; i++)
+            {
+                float[] temp = vertsSq[i];
+                temp[2] = SliceDepth;
+                temp[7] = SliceDepth;
+                temp[12] = SliceDepth;
+                temp[17] = SliceDepth;
+                vertsSq[i] = temp;
+            }
+
+            CheckVisibleChunks();
+        }
+
+        /// <summary>
+        /// Updates the list which slice image chunks are visible
+        /// </summary>
+        private void CheckVisibleChunks() {
+            Vector3 dataDimsHit = new Vector3(DataWidth / 2 + Image.GetChunkDist(), DataHeight / 2 + Image.GetChunkDist(), DataDepth / 2 + Image.GetChunkDist());
+            for (int i = 0; i < Image.ChunkVisibility.Length; i++)
+            {
+                Vector3 ChunkPoint = Vector3.Transform(new Vector3(vertsSq[i][0] + Image.GetChunkDist(), vertsSq[i][1] - Image.GetChunkDist(), vertsSq[i][2]), Rots);
+                if (MathF.Abs(ChunkPoint.X) > dataDimsHit.X || MathF.Abs(ChunkPoint.Y) > dataDimsHit.Y || MathF.Abs(ChunkPoint.Z) > dataDimsHit.Z)
+                {
+                    Image.ChunkVisibility[i] = false;
+                }
+                else
+                {
+                    Image.ChunkVisibility[i] = true;
+                }
+            }
+
         }
 
         /// <summary>
@@ -472,20 +566,26 @@ namespace OpenTKSlicingModule
         {
             mouseDeltaRot.end = end;
 
-
-            float deltaX = (float)(mouseDeltaRot.end.X - mouseDeltaRot.start.X) * deltaTime * mouseMult.X;
-            float deltaY = (float)(mouseDeltaRot.end.Y - mouseDeltaRot.start.Y) * deltaTime * mouseMult.Y;
+            float deltaX = (float)(mouseDeltaRot.end.X - mouseDeltaRot.start.X) * mouseMult.X;
+            float deltaY = (float)(mouseDeltaRot.end.Y - mouseDeltaRot.start.Y) * mouseMult.Y;
 
             mouseDeltaRot.start = mouseDeltaRot.end;
 
-            float a = (-deltaX * (MathF.PI)) / 180;
-            float b = (-deltaY * (MathF.PI)) / 180;
+            float a = -deltaX;
+            float b = -deltaY;
 
-            Quaternion quart = new Quaternion(cam.Right.X * b + a * cam.Up.X, cam.Right.Y * b + a * cam.Up.Y, cam.Right.Z * b + a * cam.Up.Z);
+            Quaternion quart = new Quaternion(cam.Right.X * b + a * cam.Up.X, cam.Right.Y * b + a * cam.Up.Y, cam.Right.Z * b + a * cam.Up.Z).Normalized();
             Vector3 transformVect = Vector3.Transform(cam.Position, quart);
-            Rots = quart * Rots;
+
+
             cam.Position = transformVect;
+            Rots = quart * Rots;
+
             RotatedOffset = cam.offset;
+
+            Image.ChangeSliceRotations(Rots);
+            CheckVisibleChunks();
+
         }
 
         /// <summary>
@@ -514,7 +614,7 @@ namespace OpenTKSlicingModule
                 float fovMultiplier = cam.sizeMult * 100f / (float)zoomPercent;
                 cam.offset += (cam.Up * deltaY) * fovMultiplier;
                 cam.offset += (cam.Right * deltaX) * fovMultiplier;
-            } 
+            }
             else {
 
                 float screenX = deltaX / size.X;
@@ -532,8 +632,8 @@ namespace OpenTKSlicingModule
             if (MathF.Abs(cam.offset.X) > maxDist ||
                 MathF.Abs(cam.offset.Y) > maxDist ||
                 MathF.Abs(cam.offset.Z) > maxDist) {
-                    cam.offset = temp;
-            } 
+                cam.offset = temp;
+            }
         }
 
         /// <summary>
@@ -590,14 +690,75 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
+        /// Sets the endian value of the volume data
+        /// </summary>
+        /// <param name="end">True if big endian, false if little endian</param>
+        public void SetEndian(bool end)
+        {
+            Image.SetBigEndian(end);
+        }
+
+        /// <summary>
+        /// Set the raw status of volume file
+        /// </summary>
+        /// <param name="raw">True if raw, false if image sequence</param>
+        public void SetRaw(bool raw)
+        {
+            Image.SetRaw(raw);
+        }
+
+        /// <summary>
+        /// Sets the filepath of volume data file
+        /// </summary>
+        /// <param name="path"></param>
+        public void SetFilepath(string path)
+        {
+            Image.SetFilepath(path);
+        }
+
+        /// <summary>
+        /// Sets the byte depth of the volume data file
+        /// </summary>
+        /// <param name="byteDepth">How many bytes per volume data value</param>
+        public void SetByteDepth(int byteDepth)
+        {
+            Image.SetByteDepth(byteDepth);
+        }
+
+        /// <summary>
+        /// Sets the normalization min value
+        /// </summary>
+        /// <param name="min">Normalization min value</param>
+        public void SetNormMin(float min) {
+            NormalizationMin = min;
+        }
+
+        /// <summary>
+        /// Sets normalization max value
+        /// </summary>
+        /// <param name="max">Normalization max value</param>
+        public void SetNormMax(float max)
+        {
+            NormalizationMax = max;
+        }
+
+        /// <summary>
+        /// Gets the slice status message
+        /// </summary>
+        /// <returns>Slice status message</returns>
+        public string GetSliceStatus() {
+            return Image.status;
+        }
+
+        /// <summary>
         /// Resizes the viewport and changes cam aspects accordingly
         /// </summary>
         /// <param name="width">Width of viewport</param>
         /// <param name="height">Heigth of viewport</param>
         public void Resize(float width, float height)
         {
-            mouseMult.X = 6284f / ((float)width); // Pi * 2 * 1000 aprox 6284f
-            mouseMult.Y = 6284f / ((float)height);
+            mouseMult.X = MathF.PI / (float)width;//6284f / ((float)width); // Pi * 2 * 1000 aprox 6284f
+            mouseMult.Y = MathF.PI / (float)height; //6284f / ((float)height);
             GL.Viewport(0, 0, Convert.ToInt32(width), Convert.ToInt32(height));
             cam.AspectRatio = (float)width / (float)height;
             size = new Vector2(width, height);

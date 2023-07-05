@@ -28,6 +28,15 @@ pääsee muokkaamaan MainWindow.xaml tiedostosta muuttamalla VolumeViewer kompon
 MapWidth, MapHeight ja MapDepth arvoja. Käytettävää projektiota voidaan myös muuttaa 
 ortograafisesta perspektiiviin muuttamalla IsOrthographic atribuutin arvon falseksi. 
 
+Poikkileikkauksen kuvan lisäämisen myötä ohjelma tarvitsee datan dimensioiden lisäksi 
+myös tiedostopolun raakadatan tiedostoon. Ohjelma tarvitsee myös tiedostopolun lisäksi 
+tiedon datatiedoston tavujärjestyksestä, datasyvyydestä sekä näytettävistä arvoista. Jos 
+kyseisiä ei anneta ohjelmalle, ohjelma käyttää näiden tapauksissa oletusarvoja, jotka voivat
+johtaa siihen että näytettävä kuva ei näy oikein, tai ohjelma kaatuu käynnistyksen yhteydessä.
+
+MainWindow.xaml sisältää kommentoituna muutaman esimerkin VolumeViewer komponentin alustamisesta, 
+sekä yksi esimerkki on jätetty kommentoimatta, jotta sitä voidaan käyttää pohjana ohjelman testaamiseen.
+
 ## Yleisimmät kääntämisen ongelmat 
 
 Jos kääntämisen yhteydessä ohjelma kaatuu ja heittää 

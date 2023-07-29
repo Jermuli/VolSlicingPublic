@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Magick.NET-Q16-HDRI-AnyCPU" Version="7.24.1" />
     <PackageReference Include="OpenTK.GLWpfControl" Version="4.2.2" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
   </ItemGroup>

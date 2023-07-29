@@ -156,7 +156,9 @@ namespace OpenTKSlicingModule
         /// <param name="depth">Depth of the vol data</param>
         /// <param name="winWidth">Width of the openTK control window</param>
         /// <param name="winHeight">Height of the openTK control window</param>
-        public Scene(int width, int height, int depth, int bDepth, float winWidth, float winHeight, float normMin, float normMax, string filepath, bool isOrtho, bool bigEnd, bool isRaw)
+        public Scene(int width, int height, int depth, int bDepth, float winWidth, float winHeight, float normMin, float normMax, 
+                     string filepath, bool isOrtho, bool bigEnd, SliceImage.FileType fType, SliceImage.InterpolationMethod iMethod,
+                     string fTemplate, float iScale, long lowLoDMaxSize)
         {
 
             cam.IsOrthographic = isOrtho;
@@ -248,7 +250,8 @@ namespace OpenTKSlicingModule
 
             int maxDist = (int)MathHelper.NextPowerOfTwo(MathF.Sqrt(depth * depth + width * width + height * height));
 
-            Image = new SliceImage(filepath, DataWidth, DataHeight, DataDepth, Rots, SliceDepth, isRaw, bigEnd, bDepth);
+            Image = new SliceImage(filepath, DataWidth, DataHeight, DataDepth, Rots, SliceDepth, bigEnd, bDepth, fType, 
+                                   iMethod, fTemplate, iScale, lowLoDMaxSize);
 
             int max2 = Image.GetMaxDist() / 2;
             int chunks = Image.GetChunksPerDim();
@@ -258,10 +261,10 @@ namespace OpenTKSlicingModule
                 for (int j = 0; j < chunks; j++)
                 {
                     vertsSq[i * chunks + j] = new float[]{
-                          -max2+j*Image.ChunkSize,     max2-i*Image.ChunkSize,      0,      0f, 1f,
-                          -max2+(j+1)*Image.ChunkSize, max2-i*Image.ChunkSize,      0,      1f, 1f,
-                          -max2+(j+1)*Image.ChunkSize, max2-(i+1)*Image.ChunkSize,  0,      1f, 0f,
-                          -max2+j*Image.ChunkSize,     max2-(i+1)*Image.ChunkSize,  0,      0f, 0f
+                          -max2+j*Image.ChunkSize - 0.1f,     max2-i*Image.ChunkSize,      0,      0f, 1f,
+                          -max2+(j+1)*Image.ChunkSize + 0.1f, max2-i*Image.ChunkSize,      0,      1f, 1f,
+                          -max2+(j+1)*Image.ChunkSize + 0.1f, max2-(i+1)*Image.ChunkSize,  0,      1f, 0f,
+                          -max2+j*Image.ChunkSize - 0.1f,     max2-(i+1)*Image.ChunkSize,  0,      0f, 0f
                     };
                 }
             }
@@ -396,8 +399,8 @@ namespace OpenTKSlicingModule
                 if (Image.ChunkVisibility[i])
                 {
                     GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);
-                    GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Image.GetChunkSize(), Image.GetChunkSize(), 0, PixelFormat.Red, format, Image.GetSliceChunk(i));
+                    GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);//Image.GetChunkSize()
+                    GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Image.GetChunkDims(i), Image.GetChunkDims(i), 0, PixelFormat.Red, format, Image.GetSliceChunk(i));
 
                     GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
                     GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
@@ -699,15 +702,6 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
-        /// Set the raw status of volume file
-        /// </summary>
-        /// <param name="raw">True if raw, false if image sequence</param>
-        public void SetRaw(bool raw)
-        {
-            Image.SetRaw(raw);
-        }
-
-        /// <summary>
         /// Sets the filepath of volume data file
         /// </summary>
         /// <param name="path"></param>
@@ -740,6 +734,47 @@ namespace OpenTKSlicingModule
         public void SetNormMax(float max)
         {
             NormalizationMax = max;
+        }
+
+        /// <summary>
+        /// Sets the filetype used by the volume data
+        /// </summary>
+        /// <param name="fType">Volumedata filetype</param>
+        public void SetFileType(SliceImage.FileType fType) { 
+            Image.SetFileType(fType);
+        }
+
+        /// <summary>
+        /// Sets the interpolation method used
+        /// </summary>
+        /// <param name="iMethod">Used interpolation method</param>
+        public void SetInterpolationMethod(SliceImage.InterpolationMethod iMethod) {
+            Image.SetInterpolationMethod(iMethod);
+        }
+
+        /// <summary>
+        /// Sets image sequence filename filter template
+        /// </summary>
+        /// <param name="template">String which filenames in the folder will be filtered by</param>
+        public void SetFileTemplate(string template)
+        {
+            Image.SetFileTemplate(template);
+        }
+
+        /// <summary>
+        /// Sets the maximum scale (unless low LoD scale is bigger) which the program will interpolate the slice
+        /// </summary>
+        /// <param name="scale">Scale of the slice</param>
+        public void SetInterpolationScale(float scale) { 
+            Image.SetInterpolationScale(scale);
+        }
+
+        /// <summary>
+        /// Sets the Low LoD maximum memory usage size in MB (can be a bit more due to internal data structures)
+        /// </summary>
+        /// <param name="maxSize">Maximum size of low LoD used memory in MB</param>
+        public void SetLowLoDMaxSize(long maxSize) { 
+            Image.SetLowLodMaxSize(maxSize);
         }
 
         /// <summary>

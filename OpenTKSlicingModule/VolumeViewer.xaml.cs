@@ -86,6 +86,28 @@ namespace OpenTKSlicingModule
             }
         }
 
+        private float _interpolationScale = 1.0f;
+        public float InterpolationScale
+        {
+            get => _interpolationScale;
+            set
+            {
+                _interpolationScale = value;
+                scene.SetInterpolationScale(value);
+            }
+        }
+
+        private long _lowLoDMaxSizeMB = 1;
+        public long LowLodMaxSizeMB
+        {
+            get => _lowLoDMaxSizeMB;
+            set
+            {
+                _lowLoDMaxSizeMB = value;
+                scene.SetLowLoDMaxSize(value);
+            }
+        }
+
         private string _filepath = @" ";
         public string Filepath
         {
@@ -94,6 +116,17 @@ namespace OpenTKSlicingModule
             {
                 _filepath = value;
                 scene.SetFilepath(value);
+            }
+        }
+
+        private string _fileTemplate = @" ";
+        public string FileTemplate
+        {
+            get => _fileTemplate;
+            set
+            {
+                _fileTemplate = value;
+                scene.SetFileTemplate(value);
             }
         }
 
@@ -119,14 +152,25 @@ namespace OpenTKSlicingModule
             }
         }
 
-        private bool _isRaw = true;
-        public bool IsRaw
+        private SliceImage.FileType _fileType = SliceImage.FileType.Raw;
+        public SliceImage.FileType FileType
         {
-            get => _isRaw;
+            get => _fileType;
             set
             {
-                _isRaw = value;
-                scene.SetRaw(value);
+                _fileType = value;
+                scene.SetFileType(value);
+            }
+        }
+
+        private SliceImage.InterpolationMethod _interpolationMethod = SliceImage.InterpolationMethod.NearestNeighbor;
+        public SliceImage.InterpolationMethod InterpolationMethod
+        {
+            get => _interpolationMethod;
+            set
+            {
+                _interpolationMethod = value;
+                scene.SetInterpolationMethod(value);
             }
         }
 
@@ -176,7 +220,7 @@ namespace OpenTKSlicingModule
             
             scene = new Scene(MapWidth, MapHeight, MapDepth, _byteDepth, Convert.ToSingle(OpenTkControl.ActualWidth),
                               Convert.ToSingle(OpenTkControl.ActualHeight), _normMin, _normMax, _filepath, IsOrthographic,
-                              IsBigEndian, IsRaw);
+                              IsBigEndian, FileType, InterpolationMethod, FileTemplate, InterpolationScale, LowLodMaxSizeMB);
         }
 
         /// <summary>
@@ -316,7 +360,7 @@ namespace OpenTKSlicingModule
         private void CreateScene() {
             scene = new Scene(MapWidth, MapHeight, MapDepth, _byteDepth, Convert.ToSingle(OpenTkControl.ActualWidth), 
                               Convert.ToSingle(OpenTkControl.ActualHeight), _normMin, _normMax, _filepath, IsOrthographic, 
-                              IsBigEndian, IsRaw);
+                              IsBigEndian, FileType, InterpolationMethod, FileTemplate, InterpolationScale, LowLodMaxSizeMB);
             double dist = Convert.ToDouble(scene.GetDiagonalLength());
             SliceDepthSlider.Maximum = dist;
             SliceDepthSlider.Minimum = -dist;

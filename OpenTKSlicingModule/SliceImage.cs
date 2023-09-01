@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using PixelFormat = OpenTK.Graphics.OpenGL4.PixelFormat;
-using StbImageSharp;
 using ImageMagick;
 using System.IO;
 using System.Threading;
@@ -22,6 +18,7 @@ namespace OpenTKSlicingModule
             Raw
         }
 
+
         public enum InterpolationMethod
         {
             NearestNeighbor,
@@ -33,7 +30,7 @@ namespace OpenTKSlicingModule
         public byte[][] SliceImgB;
         public bool ASlice = true;
         public int ChunkSize;
-        private readonly int ChunksPerDim = 16;
+        private int ChunksPerDim = 16;
         private float ChunkDist;
         public bool[] ChunkVisibility;
         private string DataPath;
@@ -51,13 +48,15 @@ namespace OpenTKSlicingModule
         private FileType DataType = FileType.Raw;
         private string ImageSeqFileTemplate;
         private int LastSeqImgNumber = -1;
-        //private int LastSeqImgNumberTrilinear = -1;
-        //private int LastSeqImgNumberTricubic = -1;
+        private int LastSeqImgNumberTrilinear = -1;
+        private int LastSeqImgNumberTricubic = -1;
         private byte[] LastSeqImg = Array.Empty<byte>();
-        //private byte[][] LastSeqImgTrilinear = new byte[2][];
-        //private byte[][] LastSeqImgTricubic = new byte[4][];
+        private byte[][] LastSeqImgTrilinear = new byte[2][];
+        private byte[][] LastSeqImgTricubic = new byte[4][];
         private InterpolationMethod Method = InterpolationMethod.NearestNeighbor;
 
+        private bool LowLoDModelReadyForSliceReading = false;
+        private bool LowLoDModelReadyForRendering = false;
         private byte[][] LowLoDVolData = Array.Empty<byte[]>();
         private long LowLoDVolDataMBSize = 1;
         private float LowLoDVolDataScale;
@@ -67,6 +66,7 @@ namespace OpenTKSlicingModule
         private float LowLoDUnitSize;
         private int LowLoDChunkSize;
         private int LowLoDMaxDist;
+        
 
         private float InterpolationScale = 1f;
 
@@ -87,7 +87,7 @@ namespace OpenTKSlicingModule
         /// <param name="byteSize">Byte size of the raw data</param>
         public SliceImage(string datapath, int dataWidth, int dataHeight, int dataDepth, Quaternion rotations, int sliceDepth, 
                           bool endian, int byteSize, FileType fType, InterpolationMethod iMethod, string fileTemplate, 
-                          float iScale, long lowLoDMaxSize)
+                          float iScale, long lowLoDMaxSize, CancellationToken token)
         {
             DataPath = datapath;
             ImageSeqFileTemplate = fileTemplate;
@@ -103,22 +103,30 @@ namespace OpenTKSlicingModule
             InterpolationScale = iScale;
             LowLoDVolDataScale = lowLoDMaxSize;
             MaxDist = (int)MathHelper.NextPowerOfTwo(MathF.Sqrt(DataDepth * DataDepth + DataWidth * DataWidth + DataHeight * DataHeight));
+            ChunksPerDim = (int)Math.Clamp(MathHelper.NextPowerOfTwo(Math.Sqrt(MaxDist))/4,2,128);
             ChunkSize = MathHelper.Max(1, MaxDist / ChunksPerDim);
             ChunkDist = MathF.Sqrt(ChunkSize * ChunkSize * 2f) / 2f;
             ChunkVisibility = new bool[ChunksPerDim * ChunksPerDim];
             SliceImgA = new byte[ChunksPerDim * ChunksPerDim][];
             SliceImgB = new byte[ChunksPerDim * ChunksPerDim][];
 
-            MakeLowLodModel();
-
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
         /// Makes Low LoD model from the volume data
         /// </summary>
-        private void MakeLowLodModel() {
+        private void MakeLowLodModel(CancellationToken token) {
+            status = "Creating model: 0,0%";
             //CancelThread.Cancel();
+            LowLoDModelReadyForRendering = false;
+            LowLoDModelReadyForSliceReading = false;
             double scale = Math.Pow((double)((double)LowLoDVolDataMBSize * 1024 * 1024) / ((double)DataWidth * (double)DataHeight * (double)DataDepth * (double)ByteSize), 1.0 / 3.0);
+
+            double temp = MathHelper.NextPowerOfTwo(1 / scale);
+            scale = 1 / temp;
+
+
             LowLoDVolDataScale = MathF.Min(1, Convert.ToSingle(scale));
             LowLoDVolDataWidth = (int)(DataWidth * LowLoDVolDataScale);
             LowLoDVolDataHeight = (int)(DataHeight * LowLoDVolDataScale);
@@ -131,9 +139,7 @@ namespace OpenTKSlicingModule
 
             if (DataPath != " ")
             {
-                float w2 = DataWidth / 2;
-                float h2 = DataHeight / 2;
-                float d2 = DataDepth / 2;
+                int taskProgress = 0;
                 switch (DataType) {
                     case FileType.Raw:
                         using (FileStream fs = File.OpenRead(DataPath))
@@ -146,6 +152,7 @@ namespace OpenTKSlicingModule
                                 {
                                     for (int k = 0; k < LowLoDVolDataWidth; k++)
                                     {
+                                        if (token.IsCancellationRequested) return;
                                         Vector3 LowLoDValuePosition = new Vector3(k * LowLoDUnitSize, j * LowLoDUnitSize, i * LowLoDUnitSize);
 
                                         Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z, fs);
@@ -154,6 +161,8 @@ namespace OpenTKSlicingModule
                                             bytes[((j * LowLoDVolDataWidth + k) * ByteSize) + l] = pixelBytes[l];
                                         }
                                     }
+                                    taskProgress++;
+                                    status = "Creating model: " + (100 * (double)taskProgress / ((double)LowLoDVolDataHeight * (double)LowLoDVolDataDepth)).ToString("F1") + "%";
                                 }
                                 LowLoDVolData[i] = bytes;
                             }
@@ -168,6 +177,7 @@ namespace OpenTKSlicingModule
                             {
                                 for (int k = 0; k < LowLoDVolDataWidth; k++)
                                 {
+                                    if (token.IsCancellationRequested) return;
                                     Vector3 LowLoDValuePosition = new Vector3(k * LowLoDUnitSize, j * LowLoDUnitSize, i * LowLoDUnitSize);
 
                                     Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z);
@@ -176,13 +186,20 @@ namespace OpenTKSlicingModule
                                         bytes[((j * LowLoDVolDataWidth + k) * ByteSize) + l] = pixelBytes[l];
                                     }
                                 }
+                                taskProgress++;
+                                status = "Creating model: " + (100 * taskProgress / (LowLoDVolDataHeight * LowLoDVolDataDepth)).ToString("F1") + "%";
                             }
                             LowLoDVolData[i] = bytes;
                         }
                         break;
                 }
-                
+                status = "Model ready!";
+
             }
+            LowLoDModelReadyForSliceReading = true;
+            UpdateSlice();
+            LowLoDModelReadyForRendering = true;
+
         }
 
         /// <summary>
@@ -191,7 +208,7 @@ namespace OpenTKSlicingModule
         /// </summary>
         private void UpdateSlice() {
             
-            if (DataPath != " ")
+            if (DataPath != " " && LowLoDModelReadyForSliceReading)
             {
                 CancelThread.Cancel();
                 ASlice = true;
@@ -211,7 +228,7 @@ namespace OpenTKSlicingModule
                                 for (int k = 0; k < LowLoDChunkSize; k++)
                                 {
                                     byte[] pixelBytes = new byte[ByteSize];
-                                    Vector3 texelPosition = Vector3.Transform(new Vector3((i - (ChunksPerDim / 2)) * LowLoDChunkSize * LowLoDUnitSize + (k * LowLoDUnitSize), ((ChunksPerDim / 2) - h - 1) * LowLoDChunkSize * LowLoDUnitSize + (j * LowLoDUnitSize), SliceDepth), Rotations);
+                                    Vector3 texelPosition = Vector3.Transform(new Vector3((i-(ChunksPerDim / 2)) * LowLoDChunkSize * LowLoDUnitSize + (k * LowLoDUnitSize), ((ChunksPerDim / 2) - h - 1) * LowLoDChunkSize * LowLoDUnitSize + (j * LowLoDUnitSize), SliceDepth), Rotations);
                                     if (MathF.Abs(texelPosition.X) > w2 || MathF.Abs(texelPosition.Y) > h2 || MathF.Abs(texelPosition.Z) > d2)
                                     {
                                         for (int l = 0; l < ByteSize; l++)
@@ -221,9 +238,10 @@ namespace OpenTKSlicingModule
                                     }
                                     else
                                     {
-                                        long a = (long)MathHelper.Clamp(Convert.ToInt64(Round(texelPosition.X + w2 - 1) * LowLoDVolDataScale), 0, LowLoDVolDataWidth - 1);
+                                        long a = (long)MathHelper.Clamp(Convert.ToInt64(Round(w2 - texelPosition.X) * LowLoDVolDataScale), 0, LowLoDVolDataWidth - 1);
                                         long b = (long)MathHelper.Clamp(Convert.ToInt64(Round(h2 - texelPosition.Y - 1) * LowLoDVolDataScale), 0, LowLoDVolDataHeight - 1) * LowLoDVolDataWidth;
                                         long c = (long)MathHelper.Clamp(Convert.ToInt64(Round(texelPosition.Z + d2) * LowLoDVolDataScale), 0, LowLoDVolDataDepth - 1);
+                                        
                                         for (int l = 0; l < ByteSize; l++)
                                         {
                                             pixelBytes[l] = LowLoDVolData[c][((a + b) * ByteSize) + l];
@@ -252,7 +270,7 @@ namespace OpenTKSlicingModule
                     float nextSliceDataScale = 2 / MathHelper.NextPowerOfTwo(LowLoDUnitSize);
                     status = "Loading slice: 0,0%";
                     int RenderedChunks = GetRenderedChunkAmount();
-                    int taskSize = (int) MathF.Log(1f / nextSliceDataScale, 2f);
+                    int taskSize = (int) MathF.Log(InterpolationScale / nextSliceDataScale, 2f);
                     Task.Run(() => UpdateSlice(Math.Min(nextSliceDataScale, InterpolationScale), cToken, taskSize, 0, RenderedChunks), cToken);//LowLoDVolDataScale * 2
                 }
                 else status = "Loading slice: Completed";
@@ -322,7 +340,7 @@ namespace OpenTKSlicingModule
                                             {
                                                 if (token.IsCancellationRequested) return;
                                                 byte[] pixelBytes = new byte[ByteSize];
-                                                Vector3 texelPosition = Vector3.Transform(new Vector3((i - (ChunksPerDim / 2)) * chunkSize * unitSize + (k * unitSize), ((ChunksPerDim / 2) - h - 1) * chunkSize * unitSize + (j * unitSize), SliceDepth), Rotations);
+                                                Vector3 texelPosition = Vector3.Transform(new Vector3((i-(ChunksPerDim / 2)) * chunkSize * unitSize + (k * unitSize), ((ChunksPerDim / 2) - h - 1) * chunkSize * unitSize + (j * unitSize), SliceDepth), Rotations);
                                                 if (MathF.Abs(texelPosition.X) > w2 || MathF.Abs(texelPosition.Y) > h2 || MathF.Abs(texelPosition.Z) > d2)
                                                 {
                                                     for (int l = 0; l < ByteSize; l++)
@@ -332,9 +350,10 @@ namespace OpenTKSlicingModule
                                                 }
                                                 else
                                                 {
-                                                    float x = MathHelper.Clamp(texelPosition.X + w2, 0, DataWidth - 1);
+                                                    float x = MathHelper.Clamp(w2 - texelPosition.X, 0, DataWidth - 1);
                                                     float y = MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1);
-                                                    float z = MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth- 1);
+                                                    float z = MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1);
+
                                                     Interpolate(ref pixelBytes, x, y, z, fs);
                                                     for (int l = 0; l < ByteSize; l++)
                                                     {
@@ -373,7 +392,7 @@ namespace OpenTKSlicingModule
                                         {
                                             if (token.IsCancellationRequested) return;
                                             byte[] pixelBytes = new byte[ByteSize];
-                                            Vector3 texelPosition = Vector3.Transform(new Vector3((i - (ChunksPerDim / 2)) * chunkSize * unitSize + (k * unitSize), ((ChunksPerDim / 2) - h - 1) * chunkSize * unitSize + (j * unitSize), SliceDepth), Rotations);
+                                            Vector3 texelPosition = Vector3.Transform(new Vector3((i-(ChunksPerDim / 2)) * chunkSize * unitSize + (k * unitSize), ((ChunksPerDim / 2) - h - 1) * chunkSize * unitSize + (j * unitSize), SliceDepth), Rotations);
                                             if (MathF.Abs(texelPosition.X) > w2 || MathF.Abs(texelPosition.Y) > h2 || MathF.Abs(texelPosition.Z) > d2)
                                             {
                                                 for (int l = 0; l < ByteSize; l++)
@@ -383,7 +402,7 @@ namespace OpenTKSlicingModule
                                             }
                                             else
                                             {
-                                                Interpolate(ref pixelBytes, MathHelper.Clamp(texelPosition.X + w2, 0, DataWidth -1), MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1), MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1));
+                                                Interpolate(ref pixelBytes, MathHelper.Clamp(w2 - texelPosition.X, 0, DataWidth - 1), MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1), MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1));
                                                 for (int l = 0; l < ByteSize; l++)
                                                 {
                                                     chunkPixels[j * chunkSize * ByteSize + k * ByteSize + l] = pixelBytes[l];
@@ -440,6 +459,7 @@ namespace OpenTKSlicingModule
         /// <param name="fs">Filestream to the raw file</param>
         private void Interpolate(ref byte[] bytes, float x, float y, float z,  FileStream fs)
         {
+
             byte[] pixelBytes = new byte[ByteSize];
             bool borderCase = false;
             if (Method == InterpolationMethod.Tricubic && (x < 1 || x > DataWidth - 1 || 
@@ -493,7 +513,7 @@ namespace OpenTKSlicingModule
 
                     switch (ByteSize) {
                         case 1:
-                            pixelBytes = BitConverter.GetBytes((sbyte)interpolatedValue);
+                            pixelBytes[0] = (byte)interpolatedValue;
                             break;
                         case 2:
                             pixelBytes = BitConverter.GetBytes((ushort)interpolatedValue);
@@ -574,7 +594,7 @@ namespace OpenTKSlicingModule
                     switch (ByteSize)
                     {
                         case 1:
-                            pixelBytes = BitConverter.GetBytes((sbyte)value);
+                            pixelBytes[0] = (byte)value;
                             break;
                         case 2:
                             pixelBytes = BitConverter.GetBytes((ushort)value);
@@ -718,33 +738,13 @@ namespace OpenTKSlicingModule
         private void Interpolate(ref byte[] bytes, float x, float y, float z)
         {
             byte[] pixelBytes = new byte[ByteSize];
-
-            int zRound = Round(z);
-            if (zRound != LastSeqImgNumber)
-            {
-                LastSeqImgNumber = zRound;
-                List<string> imgSeq = MakeImgSeqFileList(DataPath, ImageSeqFileTemplate);
-
-                MagickImage img = new MagickImage(imgSeq[Round(z)]);
-                img.Format = MagickFormat.R;
-                LastSeqImg = img.ToByteArray();
-            }
-
-            for (int i = 0; i < ByteSize; i++)
-            {
-                pixelBytes[i] = LastSeqImg[(Round(y) * DataWidth + Round(x)) * ByteSize + i];
-            }
-            bytes = pixelBytes;
-
-            //WIP NOT WORKING version of the tricubic and trilinear interpolation
-            /*byte[] pixelBytes = new byte[ByteSize];
             bool borderCase = false;
-            if (Method == InterpolationMethod.Tricubic && (x < 1 || x > DataWidth - 1 ||
-                                                           y < 1 || y > DataHeight - 1 ||
-                                                           z < 1 || z > DataDepth - 1))
+            if (Method == InterpolationMethod.Tricubic && (x < 1 || x >= DataWidth - 1 ||
+                                                           y < 1 || y >= DataHeight - 1 ||
+                                                           z < 1 || z >= DataDepth - 1))
             {
                 borderCase = true;
-                Method = InterpolationMethod.Trilinear;
+                Method = InterpolationMethod.NearestNeighbor;
             }
             switch (Method)
             {
@@ -774,11 +774,11 @@ namespace OpenTKSlicingModule
                         List<string> imgSeq = MakeImgSeqFileList(DataPath, ImageSeqFileTemplate);
                         for (int i = 0; i < 2; i++)
                         {
-                            using (MagickImage img = new MagickImage(imgSeq[zTrilinear + i])) {
+                            using (MagickImage img = new MagickImage(imgSeq[zTrilinear + i]))
+                            {
                                 img.Format = MagickFormat.R;
                                 LastSeqImgTrilinear[i] = img.ToByteArray();
                             }
-                            
                         }
                     }
                     
@@ -920,12 +920,21 @@ namespace OpenTKSlicingModule
                     break;
             }
             if (borderCase) Method = InterpolationMethod.Tricubic;
-            bytes = pixelBytes;*/
+            bytes = pixelBytes;
         }
 
-        /*private float ReadFromStream(long x, long y, long z)
+        /// <summary>
+        /// Read from volumetric data filestream a number from volumetric data using byte depth corresponding byte translation to float
+        /// </summary>
+        /// <param name="x">X coordinate</param>
+        /// <param name="y">Y coordinate</param>
+        /// <param name="z">Z coordinate</param>
+        /// <returns>Float value corresponding to the coordinate</returns>
+        private float ReadFromStream(long x, long y, long z)
         {
             byte[] bytes = new byte[ByteSize];
+            x = (long)MathHelper.Clamp(x, 0, DataWidth - 1);
+            y = (long)MathHelper.Clamp(y, 0, DataHeight - 1);
             for (int i = 0; i < ByteSize; i++)
             {
                 switch (Method) {
@@ -959,11 +968,21 @@ namespace OpenTKSlicingModule
                     break;
             }
             return floatValue;
-        }*/
+        }
 
-        /*private float ReadFromStream(long x, long y, byte[] sliceBytes)
+        /// <summary>
+        /// Reads a XY coordinate corresponding value from a slice image bytes
+        /// </summary>
+        /// <param name="x">X coordinate</param>
+        /// <param name="y">Y coordinate</param>
+        /// <param name="sliceBytes">Slice image bytes</param>
+        /// <returns>Corresponding float value</returns>
+        private float ReadFromStream(long x, long y, byte[] sliceBytes)
         {
             byte[] bytes = new byte[ByteSize];
+
+            x = (long)MathHelper.Clamp(x, 0, DataWidth-1);
+            y = (long)MathHelper.Clamp(y, 0, DataHeight-1);
 
             for (int i = 0; i < ByteSize; i++)
             {
@@ -999,7 +1018,7 @@ namespace OpenTKSlicingModule
                     break;
             }
             return floatValue;
-        }*/
+        }
 
         /// <summary>
         /// Round positive float to an closest integer
@@ -1138,6 +1157,10 @@ namespace OpenTKSlicingModule
             else return ChunkTextureSizeB;
         }
 
+        public float GetChunkCenterOffset() {
+            return ((float)ChunkSize)/2f;
+        }
+
         /// <summary>
         /// Returns the texture bytes of one chunk
         /// </summary>
@@ -1154,63 +1177,57 @@ namespace OpenTKSlicingModule
         /// Sets big endian
         /// </summary>
         /// <param name="end">Boolean value if the file is big endian</param>
-        public void SetBigEndian(bool end) { 
+        public void SetBigEndian(bool end, CancellationToken token) { 
             BigEndian = end;
-            MakeLowLodModel();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
         
         /// <summary>
         /// Sets the filepath of the volume data file
         /// </summary>
         /// <param name="path">filepath to the file</param>
-        public void SetFilepath(string path)
+        public void SetFilepath(string path, CancellationToken token)
         { 
             DataPath = path;
-            MakeLowLodModel();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
         /// Sets the byte depth of the volume data
         /// </summary>
         /// <param name="byteD">How many bytes per volume data value</param>
-        public void SetByteDepth(int byteD)
+        public void SetByteDepth(int byteD, CancellationToken token)
         { 
             ByteSize = byteD;
-            MakeLowLodModel();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
         /// Sets filetype of volume data
         /// </summary>
         /// <param name="fType">FIletype of volumedata</param>
-        public void SetFileType(FileType fType) { 
+        public void SetFileType(FileType fType, CancellationToken token) { 
             DataType = fType;
-            MakeLowLodModel();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
         /// Sets the interpolation method
         /// </summary>
         /// <param name="iMethod">Interpolation method</param>
-        public void SetInterpolationMethod(InterpolationMethod iMethod)
+        public void SetInterpolationMethod(InterpolationMethod iMethod, CancellationToken token)
         {
             Method = iMethod;
-            MakeLowLodModel();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
         /// Sets the image sequence file template
         /// </summary>
         /// <param name="template">Filename template</param>
-        public void SetFileTemplate(string template) {
+        public void SetFileTemplate(string template, CancellationToken token) {
             ImageSeqFileTemplate = template;
-            MakeLowLodModel ();
-            UpdateSlice();
+            Task.Run(() => MakeLowLodModel(token), token);
         }
 
         /// <summary>
@@ -1226,10 +1243,17 @@ namespace OpenTKSlicingModule
         /// Sets the Low LoD volume data max size
         /// </summary>
         /// <param name="maxSize">Max size of the small version of the data in MB</param>
-        public void SetLowLodMaxSize(long maxSize) { 
+        public void SetLowLodMaxSize(long maxSize, CancellationToken token) { 
             LowLoDVolDataMBSize = maxSize;
-            MakeLowLodModel ();
-            UpdateSlice ();
+            Task.Run(() => MakeLowLodModel(token), token);
+        }
+
+        /// <summary>
+        /// Returns true if low LoD model is ready and a slice is also ready to be rendered
+        /// </summary>
+        /// <returns>True if low LoD model is ready and slice is ready</returns>
+        public bool GetLowLoDState() {
+            return LowLoDModelReadyForRendering;
         }
 
         /// <summary>

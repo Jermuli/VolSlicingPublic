@@ -174,6 +174,17 @@ namespace OpenTKSlicingModule
             }
         }
 
+        private Scene.Axis _usedAxis = Scene.Axis.Z;
+        public Scene.Axis UsedAxis
+        {
+            get => _usedAxis;
+            set
+            {
+                _usedAxis = value;
+                scene.SetUsedAxis(value);
+            }
+        }
+
         // Dependency properties for future
         /*public int MapWidth
         {
@@ -250,25 +261,28 @@ namespace OpenTKSlicingModule
         /// <param name="e"></param>
         private void OpenTkControl_MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.LeftButton == MouseButtonState.Pressed)
+            if (scene.LowLoDModelReady())
             {
-                Vector2 end;
-                end.X = Convert.ToSingle(e.GetPosition(this).X);
-                end.Y = Convert.ToSingle(e.GetPosition(this).Y);
-                scene.MouseMoveRot(end);
-                double dist = Convert.ToDouble(scene.GetDiagonalLength());
-                double percent = 0;
-                if(SliceDepthSlider.Maximum != 0) percent = Math.Min(SliceDepthSlider.Value/SliceDepthSlider.Maximum, 1);
-                SliceDepthSlider.Maximum = dist;
-                SliceDepthSlider.Minimum = -dist;
-                SliceDepthSlider.Value = Math.Round(SliceDepthSlider.Maximum * percent);
-            }
-            if (e.RightButton == MouseButtonState.Pressed)
-            {
-                Vector2 end;
-                end.X = Convert.ToSingle(e.GetPosition(this).X);
-                end.Y = Convert.ToSingle(e.GetPosition(this).Y);
-                scene.MouseMovePan(end);
+                if (e.LeftButton == MouseButtonState.Pressed)
+                {
+                    Vector2 end;
+                    end.X = Convert.ToSingle(e.GetPosition(this).X);
+                    end.Y = Convert.ToSingle(e.GetPosition(this).Y);
+                    scene.MouseMoveRot(end);
+                    double dist = Convert.ToDouble(scene.GetDiagonalLength());
+                    double percent = 0;
+                    if (SliceDepthSlider.Maximum != 0) percent = Math.Min(SliceDepthSlider.Value / SliceDepthSlider.Maximum, 1);
+                    SliceDepthSlider.Maximum = dist;
+                    SliceDepthSlider.Minimum = -dist;
+                    SliceDepthSlider.Value = Math.Round(SliceDepthSlider.Maximum * percent);
+                }
+                if (e.RightButton == MouseButtonState.Pressed)
+                {
+                    Vector2 end;
+                    end.X = Convert.ToSingle(e.GetPosition(this).X);
+                    end.Y = Convert.ToSingle(e.GetPosition(this).Y);
+                    scene.MouseMovePan(end);
+                }
             }
         }
 
@@ -279,20 +293,23 @@ namespace OpenTKSlicingModule
         /// <param name="e"></param>
         private void OpenTkControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
+            if (scene.LowLoDModelReady())
             {
-                Vector2 start;
-                start.X = Convert.ToSingle(e.GetPosition(this).X);
-                start.Y = Convert.ToSingle(e.GetPosition(this).Y);
-                scene.MouseDownRot(start);
-            }
+                if (e.ChangedButton == MouseButton.Left)
+                {
+                    Vector2 start;
+                    start.X = Convert.ToSingle(e.GetPosition(this).X);
+                    start.Y = Convert.ToSingle(e.GetPosition(this).Y);
+                    scene.MouseDownRot(start);
+                }
 
-            if (e.ChangedButton == MouseButton.Right)
-            {
-                Vector2 start;
-                start.X = Convert.ToSingle(e.GetPosition(this).X);
-                start.Y = Convert.ToSingle(e.GetPosition(this).Y);
-                scene.MouseDownPan(start);
+                if (e.ChangedButton == MouseButton.Right)
+                {
+                    Vector2 start;
+                    start.X = Convert.ToSingle(e.GetPosition(this).X);
+                    start.Y = Convert.ToSingle(e.GetPosition(this).Y);
+                    scene.MouseDownPan(start);
+                }
             }
         }
 
@@ -304,22 +321,25 @@ namespace OpenTKSlicingModule
         /// <param name="e"></param>
         private void OpenTkControl_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (Keyboard.IsKeyDown(Key.LeftCtrl))
+            if (scene.LowLoDModelReady())
             {
-                if (e.Delta > 0) scene.Zoom(1);
-                else if (e.Delta < 0) scene.Zoom(-1);
-                string text = (scene.GetZoomLevel()).ToString("0");
-                ZoomText.Text = "Zoom: " + text + "%";
-            }
-            else if (Keyboard.IsKeyDown(Key.LeftShift))
-            {
-                if (e.Delta > 0) SliceDepthSlider.Value -= 10;
-                else if (e.Delta < 0) SliceDepthSlider.Value += 10; ;
-            }
-            else
-            {
-                if (e.Delta > 0) SliceDepthSlider.Value -= 1;
-                else if (e.Delta < 0) SliceDepthSlider.Value += 1;
+                if (Keyboard.IsKeyDown(Key.LeftCtrl))
+                {
+                    if (e.Delta > 0) scene.Zoom(1);
+                    else if (e.Delta < 0) scene.Zoom(-1);
+                    string text = (scene.GetZoomLevel()).ToString("0");
+                    ZoomText.Text = "Zoom: " + text + "%";
+                }
+                else if (Keyboard.IsKeyDown(Key.LeftShift))
+                {
+                    if (e.Delta > 0) SliceDepthSlider.Value -= 10;
+                    else if (e.Delta < 0) SliceDepthSlider.Value += 10; ;
+                }
+                else
+                {
+                    if (e.Delta > 0) SliceDepthSlider.Value -= 1;
+                    else if (e.Delta < 0) SliceDepthSlider.Value += 1;
+                }
             }
         }
 
@@ -331,7 +351,14 @@ namespace OpenTKSlicingModule
         /// <param name="e"></param>
         private void SliceDepthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            scene.MoveSlice(Convert.ToInt32(SliceDepthSlider.Value), MapWidth, MapHeight, MapDepth);
+            if (scene.LowLoDModelReady())
+            {
+                scene.MoveSlice(Convert.ToInt32(SliceDepthSlider.Value), MapWidth, MapHeight, MapDepth);
+            }
+            else { 
+                SliceDepthSlider.Value = 0;
+            }
+            
         }
 
         /// <summary>
@@ -342,8 +369,10 @@ namespace OpenTKSlicingModule
         /// <param name="e"></param>
         private void OpenTkControl_KeyDown(object sender, KeyEventArgs e)
         {
-            if (Keyboard.IsKeyDown(Key.Z)) scene.ResetOffset();
-            if (Keyboard.IsKeyDown(Key.X)) SliceDepthSlider.Value = 0;
+            if (scene.LowLoDModelReady()) {
+                if (Keyboard.IsKeyDown(Key.Z)) scene.ResetOffset();
+                if (Keyboard.IsKeyDown(Key.X)) SliceDepthSlider.Value = 0;
+            }
         }
 
         /// <summary>

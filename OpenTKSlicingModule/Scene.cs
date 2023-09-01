@@ -1,20 +1,40 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Diagnostics;
+using System.Threading;
 
 namespace OpenTKSlicingModule
 {
+
+    
     public class Scene
     {
+
         /// <summary>
         /// Initialize numerous variables required for the scene making process.
         /// </summary>
         #region Variables
+
+        public enum Axis
+        {
+            X,
+            Y,
+            Z
+        }
+
+        private Axis UsedAxis = Axis.Z;
+
+        private Vector2 TextX = new Vector2(0f, 0.125f);
+        private Vector2 TextY = new Vector2(0.125f, 0.125f);
+        private Vector2 TextZ = new Vector2(0.25f, 0.125f);
+        private Vector2 Text0 = new Vector2(0f, 0.75f);
+
+
+        private Vector3 XColor = new Vector3(1f,0,0);
+        private Vector3 YColor = new Vector3(0,0,1f);
+        private Vector3 ZColor = new Vector3(0,1f,0);
+        private Vector3 BgColor = new Vector3(0,0,0);
 
         private Vector3 CamOrientation = (0, 1, 0);
 
@@ -92,6 +112,25 @@ namespace OpenTKSlicingModule
         private float[] vertsTextZ = new float[20];
         private float[] vertsText0 = new float[20];
 
+        private float[] loadingTextVerts = {
+             0.5f,  0.5f, 0.0f,     1.0f, 1.0f, // top right
+             0.5f, -0.5f, 0.0f,     1.0f, 0.0f, // bottom right
+            -0.5f, -0.5f, 0.0f,     0.0f, 0.0f, // bottom left
+            -0.5f,  0.5f, 0.0f,     0.0f, 1.0f  // top left
+        };
+
+        private uint[] indsLoading = { 0, 1, 2,
+                                       2, 3, 0
+        };
+
+        private int VAOLoadingText;
+
+        private int VBOLoadingText;
+
+        private int EBOLoadingText;
+
+        private Texture loadingTexture;
+
         private int VAOAxelText;
 
         private int VBOAxelText;
@@ -145,6 +184,8 @@ namespace OpenTKSlicingModule
         public int DataDepth = 1;
         public double NormalizationMax = 1;
         public double NormalizationMin = 0.0;
+
+        private CancellationTokenSource CancelLowLoDThread = new CancellationTokenSource();
         #endregion
 
         /// <summary>
@@ -160,55 +201,9 @@ namespace OpenTKSlicingModule
                      string filepath, bool isOrtho, bool bigEnd, SliceImage.FileType fType, SliceImage.InterpolationMethod iMethod,
                      string fTemplate, float iScale, long lowLoDMaxSize)
         {
-
+            CancelLowLoDThread.Cancel();
             cam.IsOrthographic = isOrtho;
             cam.sizeMult = (MathF.Sqrt(width * width + depth * depth + height * height)) / width;
-
-            float textBaseSize = MathF.Pow(width * width + height * height, 0.5f) * 0.05f;
-
-            Vector2 textX = new Vector2(0f, 0.125f);
-            Vector2 textY = new Vector2(0.125f, 0.125f);
-            Vector2 textZ = new Vector2(0.25f, 0.125f);
-            Vector2 text0 = new Vector2(0f, 0.75f);
-            Vector2[] textures = new[] { textX, textY, textZ, text0 };
-            float textureW = 0.125f;
-            float textureH = 0.125f;
-            float textW = 2f;
-            float textH = 3f;
-
-            float[][] textTextureVerts = { vertsTextX, vertsTextY, vertsTextZ, vertsText0 };
-
-
-            for (int i = 0; i < textTextureVerts.Length; i++)
-            {
-                textTextureVerts[i][0] = -textW * textBaseSize / 2;
-                textTextureVerts[i][1] = -textH * textBaseSize / 2;
-                textTextureVerts[i][2] = 0;
-
-                textTextureVerts[i][3] = textures[i].X + textureW;
-                textTextureVerts[i][4] = textures[i].Y - textureH;
-
-                textTextureVerts[i][5] = -textW * textBaseSize / 2;
-                textTextureVerts[i][6] = textH * textBaseSize / 2;
-                textTextureVerts[i][7] = 0;
-
-                textTextureVerts[i][8] = textures[i].X + textureW;
-                textTextureVerts[i][9] = textures[i].Y;
-
-                textTextureVerts[i][10] = textW * textBaseSize / 2;
-                textTextureVerts[i][11] = textH * textBaseSize / 2;
-                textTextureVerts[i][12] = 0;
-
-                textTextureVerts[i][13] = textures[i].X;
-                textTextureVerts[i][14] = textures[i].Y;
-
-                textTextureVerts[i][15] = textW * textBaseSize / 2;
-                textTextureVerts[i][16] = -textH * textBaseSize / 2;
-                textTextureVerts[i][17] = 0;
-
-                textTextureVerts[i][18] = textures[i].X;
-                textTextureVerts[i][19] = textures[i].Y - textureH;
-            }
 
             mouseMult.X = 2880f / ((float)winWidth);
             mouseMult.Y = 1620f / ((float)winHeight);
@@ -227,6 +222,8 @@ namespace OpenTKSlicingModule
                 verts[i + 2] = verts[i + 2] * depth;
             }
 
+            SetAxisText();
+            SetBoxColors();
 
             int sliceW = MathHelper.NextPowerOfTwo(width);
             int sliceH = MathHelper.NextPowerOfTwo(height);
@@ -250,8 +247,12 @@ namespace OpenTKSlicingModule
 
             int maxDist = (int)MathHelper.NextPowerOfTwo(MathF.Sqrt(depth * depth + width * width + height * height));
 
+            
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+
             Image = new SliceImage(filepath, DataWidth, DataHeight, DataDepth, Rots, SliceDepth, bigEnd, bDepth, fType, 
-                                   iMethod, fTemplate, iScale, lowLoDMaxSize);
+                                   iMethod, fTemplate, iScale, lowLoDMaxSize, cToken);
 
             int max2 = Image.GetMaxDist() / 2;
             int chunks = Image.GetChunksPerDim();
@@ -260,11 +261,13 @@ namespace OpenTKSlicingModule
             {
                 for (int j = 0; j < chunks; j++)
                 {
+                    float offset = 0.0f;
+                    if ((int)(-max2 + j * Image.ChunkSize) == 0 || (int)(-max2 + (j + 1) * Image.ChunkSize) == 0) offset = 0.1f;
                     vertsSq[i * chunks + j] = new float[]{
-                          -max2+j*Image.ChunkSize - 0.1f,     max2-i*Image.ChunkSize,      0,      0f, 1f,
-                          -max2+(j+1)*Image.ChunkSize + 0.1f, max2-i*Image.ChunkSize,      0,      1f, 1f,
-                          -max2+(j+1)*Image.ChunkSize + 0.1f, max2-(i+1)*Image.ChunkSize,  0,      1f, 0f,
-                          -max2+j*Image.ChunkSize - 0.1f,     max2-(i+1)*Image.ChunkSize,  0,      0f, 0f
+                          -max2+j*Image.ChunkSize - offset,     max2-i*Image.ChunkSize,      0,      0f, 1f,
+                          -max2+(j+1)*Image.ChunkSize + offset, max2-i*Image.ChunkSize,      0,      1f, 1f,
+                          -max2+(j+1)*Image.ChunkSize + offset, max2-(i+1)*Image.ChunkSize,  0,      1f, 0f,
+                          -max2+j*Image.ChunkSize - offset,     max2-(i+1)*Image.ChunkSize,  0,      0f, 0f
                     };
                 }
             }
@@ -285,6 +288,10 @@ namespace OpenTKSlicingModule
             VAOAxelText = GL.GenVertexArray();
             VBOAxelText = GL.GenBuffer();
             EBOAxelText = GL.GenBuffer();
+
+            VAOLoadingText = GL.GenVertexArray();
+            VBOLoadingText = GL.GenBuffer();
+            EBOLoadingText = GL.GenBuffer();
 
 
             GL.BindVertexArray(VAO);
@@ -331,6 +338,21 @@ namespace OpenTKSlicingModule
             GL.BufferData(BufferTarget.ElementArrayBuffer, indsText.Length * sizeof(uint), indsText, BufferUsageHint.StaticDraw);
 
 
+            GL.BindVertexArray(VAOLoadingText);
+
+            GL.BindBuffer(BufferTarget.ArrayBuffer, VBOLoadingText);
+            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * loadingTextVerts.Length, loadingTextVerts, BufferUsageHint.StaticDraw);
+
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
+            GL.EnableVertexAttribArray(0);
+
+            GL.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
+            GL.EnableVertexAttribArray(1);
+
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, EBOLoadingText);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indsLoading.Length * sizeof(uint), indsLoading, BufferUsageHint.StaticDraw);
+
+
             shad = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
             shad.Use();
 
@@ -344,6 +366,8 @@ namespace OpenTKSlicingModule
             textTexture = Texture.LoadFromFile("Textures/Font.bmp");
             textTexture.Use(TextureUnit.Texture0);
 
+            loadingTexture = Texture.LoadFromFile("Textures/Loading.bmp");
+            loadingTexture.Use(TextureUnit.Texture0);
 
 
             SliceImageHandle = GL.GenTexture();
@@ -353,7 +377,124 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
-        /// Render the scene
+        /// Sets volumetric data bounding box axis colors
+        /// </summary>
+        private void SetBoxColors() {
+
+            Vector3 xColor;
+            Vector3 yColor;
+            Vector3 zColor;
+
+            switch (UsedAxis) {
+                case Axis.X:
+                    xColor = YColor;
+                    yColor = ZColor;
+                    zColor = XColor;
+                    break;
+                case Axis.Y:
+                    xColor = XColor;
+                    yColor = ZColor;
+                    zColor = YColor;
+                    break;
+                case Axis.Z:
+                    xColor = XColor;
+                    yColor = YColor;
+                    zColor = ZColor;
+                    break;
+                default:
+                    xColor = XColor;
+                    yColor = YColor;
+                    zColor = ZColor;
+                    break;
+            }
+
+
+            for (int i = 0; i < 2; i++)
+            {
+                verts[3 + (i * 6)] = xColor.X;
+                verts[3 + (i * 6) + 1] = xColor.Y;
+                verts[3 + (i * 6) + 2] = xColor.Z;
+            }
+
+            for (int i = 2; i < 4; i++)
+            {
+                verts[3 + (i * 6)] = yColor.X;
+                verts[3 + (i * 6) + 1] = yColor.Y;
+                verts[3 + (i * 6) + 2] = yColor.Z;
+            }
+
+            for (int i = 4; i < 6; i++)
+            {
+                verts[3 + (i * 6)] = zColor.X;
+                verts[3 + (i * 6) + 1] = zColor.Y;
+                verts[3 + (i * 6) + 2] = zColor.Z;
+            }
+        }
+
+        /// <summary>
+        /// Sets axis text according to which axis the volumetric data is represented
+        /// </summary>
+        private void SetAxisText() {
+            float textBaseSize = MathF.Pow(DataWidth * DataWidth + DataHeight * DataHeight, 0.5f) * 0.05f;
+            Vector2[] textures;
+            switch (UsedAxis) {
+                case Axis.X:
+                    textures = new[] { TextY, TextZ, TextX, Text0 };
+                    break;
+                case Axis.Y:
+                    textures = new[] { TextX, TextZ, TextY, Text0 };
+                    break;
+                case Axis.Z:
+                    textures = new[] { TextX, TextY, TextZ, Text0 };
+                    break;
+                default:
+                    textures = new[] { TextX, TextY, TextZ, Text0 };
+                    break;
+            }
+            
+
+            float textureW = 0.125f;
+            float textureH = 0.125f;
+            float textW = 2f;
+            float textH = 3f;
+
+            float[][] textTextureVerts = { vertsTextX, vertsTextY, vertsTextZ, vertsText0 };
+
+
+            for (int i = 0; i < textTextureVerts.Length; i++)
+            {
+                textTextureVerts[i][0] = -textW * textBaseSize / 2;
+                textTextureVerts[i][1] = -textH * textBaseSize / 2;
+                textTextureVerts[i][2] = 0;
+
+                textTextureVerts[i][3] = textures[i].X + textureW;
+                textTextureVerts[i][4] = textures[i].Y - textureH;
+
+                textTextureVerts[i][5] = -textW * textBaseSize / 2;
+                textTextureVerts[i][6] = textH * textBaseSize / 2;
+                textTextureVerts[i][7] = 0;
+
+                textTextureVerts[i][8] = textures[i].X + textureW;
+                textTextureVerts[i][9] = textures[i].Y;
+
+                textTextureVerts[i][10] = textW * textBaseSize / 2;
+                textTextureVerts[i][11] = textH * textBaseSize / 2;
+                textTextureVerts[i][12] = 0;
+
+                textTextureVerts[i][13] = textures[i].X;
+                textTextureVerts[i][14] = textures[i].Y;
+
+                textTextureVerts[i][15] = textW * textBaseSize / 2;
+                textTextureVerts[i][16] = -textH * textBaseSize / 2;
+                textTextureVerts[i][17] = 0;
+
+                textTextureVerts[i][18] = textures[i].X;
+                textTextureVerts[i][19] = textures[i].Y - textureH;
+            }
+        }
+
+        /// <summary>
+        /// Render the scene. Render loading text if volumetric data is not ready for rendering
         /// </summary>
         /// <param name="width">Vol data width</param>
         /// <param name="height">Vol data heigth</param>
@@ -361,85 +502,106 @@ namespace OpenTKSlicingModule
         public void Render(int width, int height, int depth)
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            if (Image.GetLowLoDState())
+            {
+                GL.BindVertexArray(VAO);
 
-            GL.BindVertexArray(VAO);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
+                GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * verts.Length, verts, BufferUsageHint.StaticDraw);
 
-            GL.BindBuffer(BufferTarget.ArrayBuffer, VBO);
-            GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * verts.Length, verts, BufferUsageHint.StaticDraw);
+                shad.Use();
 
-            shad.Use();
+                var model = Matrix4.Identity;
+                shad.SetMatrix4("model", model);
+                shad.SetMatrix4("view", cam.GetViewMatrix());
+                shad.SetMatrix4("projection", cam.GetProjectionMatrix());
 
-            var model = Matrix4.Identity;
-            shad.SetMatrix4("model", model);
-            shad.SetMatrix4("view", cam.GetViewMatrix());
-            shad.SetMatrix4("projection", cam.GetProjectionMatrix());
+                GL.DrawElements(PrimitiveType.Lines, inds.Length, DrawElementsType.UnsignedInt, 0);
 
-            GL.DrawElements(PrimitiveType.Lines, inds.Length, DrawElementsType.UnsignedInt, 0);
-
-            PixelType format;
-            PixelInternalFormat internalFormat;
-            switch (Image.GetByteSize()) {
-                case 2:
-                    format = PixelType.UnsignedShort;
-                    internalFormat = PixelInternalFormat.R16;
-                    break;
-
-                case 4:
-                    format = PixelType.Float;
-                    internalFormat = PixelInternalFormat.R32f;
-                    break;
-                default:
-                    format = PixelType.UnsignedByte;
-                    internalFormat = PixelInternalFormat.R8;
-                    break;
-            }
-
-            var modelSq = Matrix4.CreateFromQuaternion(Rots);
-            for (int i = 0; i < vertsSq.Length; i++) {
-                if (Image.ChunkVisibility[i])
+                PixelType format;
+                PixelInternalFormat internalFormat;
+                switch (Image.GetByteSize())
                 {
-                    GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);//Image.GetChunkSize()
-                    GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Image.GetChunkDims(i), Image.GetChunkDims(i), 0, PixelFormat.Red, format, Image.GetSliceChunk(i));
+                    case 2:
+                        format = PixelType.UnsignedShort;
+                        internalFormat = PixelInternalFormat.R16;
+                        break;
 
-                    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-                    GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-
-                    GL.BindVertexArray(VAOSq);
-
-                    GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
-                    GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq[i].Length, vertsSq[i], BufferUsageHint.DynamicDraw);
-
-                    shadSq.Use();
-                    shadSq.SetMatrix4("model", modelSq);
-                    shadSq.SetMatrix4("view", cam.GetViewMatrix());
-                    shadSq.SetMatrix4("projection", cam.GetProjectionMatrix());
-                    Vector3 dimensions = new Vector3(width, height, depth) * 0.5f;
-                    shadSq.SetVector3("CubeDims", dimensions);
-                    float normMin = Convert.ToSingle(NormalizationMin);
-                    float normMax = Convert.ToSingle(NormalizationMax);
-                    shadSq.SetFloat("LvlMin", normMin);
-                    shadSq.SetFloat("LvlMax", normMax);
-
-                    GL.DrawElements(PrimitiveType.Triangles, indsSq.Length, DrawElementsType.UnsignedInt, 0);
+                    case 4:
+                        format = PixelType.Float;
+                        internalFormat = PixelInternalFormat.R32f;
+                        break;
+                    default:
+                        format = PixelType.UnsignedByte;
+                        internalFormat = PixelInternalFormat.R8;
+                        break;
                 }
+
+                var modelSq = Matrix4.CreateFromQuaternion(Rots);
+                for (int i = 0; i < vertsSq.Length; i++)
+                {
+                    if (Image.ChunkVisibility[i])
+                    {
+                        GL.ActiveTexture(TextureUnit.Texture0);
+                        GL.BindTexture(TextureTarget.Texture2D, SliceImageHandle);//Image.GetChunkSize()
+                        GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, Image.GetChunkDims(i), Image.GetChunkDims(i), 0, PixelFormat.Red, format, Image.GetSliceChunk(i));
+
+                        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+                        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+
+                        GL.BindVertexArray(VAOSq);
+
+                        GL.BindBuffer(BufferTarget.ArrayBuffer, VBOSq);
+                        GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * vertsSq[i].Length, vertsSq[i], BufferUsageHint.DynamicDraw);
+
+                        shadSq.Use();
+                        shadSq.SetMatrix4("model", modelSq);
+                        shadSq.SetMatrix4("view", cam.GetViewMatrix());
+                        shadSq.SetMatrix4("projection", cam.GetProjectionMatrix());
+                        Vector3 dimensions = new Vector3(width, height, depth) * 0.5f;
+                        shadSq.SetVector3("CubeDims", dimensions);
+                        float normMin = Convert.ToSingle(NormalizationMin);
+                        float normMax = Convert.ToSingle(NormalizationMax);
+                        shadSq.SetFloat("LvlMin", normMin);
+                        shadSq.SetFloat("LvlMax", normMax);
+
+                        GL.DrawElements(PrimitiveType.Triangles, indsSq.Length, DrawElementsType.UnsignedInt, 0);
+                    }
+                }
+
+                GL.BindVertexArray(VAOAxelText);
+
+                Matrix4 textRot = modelSq;
+
+                float textPadding = MathF.Pow(vertsTextX[10] * vertsTextX[10] + vertsTextX[11] * vertsTextX[11], 0.5f);
+
+                Vector3 offsetX = new Vector3(-(width / 2 + textPadding), height / 2 + textPadding, -(depth / 2 + textPadding));
+                Vector3 offsetY = new Vector3(width / 2 + textPadding, -(height / 2 + textPadding), -(depth / 2 + textPadding));
+                Vector3 offsetZ = new Vector3(width / 2 + textPadding, height / 2 + textPadding, depth / 2 + textPadding);
+                Vector3 offset0 = new Vector3(width / 2 + textPadding, height / 2 + textPadding, -(depth / 2 + textPadding));
+
+                RenderAxelText(vertsTextX, textRot, offsetX, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+                RenderAxelText(vertsTextY, textRot, offsetY, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+                RenderAxelText(vertsTextZ, textRot, offsetZ, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+                RenderAxelText(vertsText0, textRot, offset0, cam.GetViewMatrix(), cam.GetProjectionMatrix());
             }
+            else {
+                GL.BindVertexArray(VAOLoadingText);
+                GL.BindBuffer(BufferTarget.ArrayBuffer, VBOLoadingText);
+                GL.BufferData(BufferTarget.ArrayBuffer, sizeof(float) * loadingTextVerts.Length, loadingTextVerts, BufferUsageHint.StaticDraw);
 
-            GL.BindVertexArray(VAOAxelText);
+                loadingTexture.Use(TextureUnit.Texture0);
 
-            Matrix4 textRot = modelSq;
+                shadAxelText.Use();
 
-            float textPadding = MathF.Pow(vertsTextX[10] * vertsTextX[10] + vertsTextX[11] * vertsTextX[11], 0.5f);
+                var matrix = Matrix4.Identity;
 
-            Vector3 offsetX = new Vector3(-(width / 2 + textPadding), height / 2 + textPadding, -(depth / 2 + textPadding));
-            Vector3 offsetY = new Vector3(width / 2 + textPadding, -(height / 2 + textPadding), -(depth / 2 + textPadding));
-            Vector3 offsetZ = new Vector3(width / 2 + textPadding, height / 2 + textPadding, depth / 2 + textPadding);
-            Vector3 offset0 = new Vector3(width / 2 + textPadding, height / 2 + textPadding, -(depth / 2 + textPadding));
+                shadAxelText.SetMatrix4("model", matrix);
+                shadAxelText.SetMatrix4("view", matrix);
+                shadAxelText.SetMatrix4("projection", matrix);
 
-            RenderAxelText(vertsTextX, textRot, offsetX, cam.GetViewMatrix(), cam.GetProjectionMatrix());
-            RenderAxelText(vertsTextY, textRot, offsetY, cam.GetViewMatrix(), cam.GetProjectionMatrix());
-            RenderAxelText(vertsTextZ, textRot, offsetZ, cam.GetViewMatrix(), cam.GetProjectionMatrix());
-            RenderAxelText(vertsText0, textRot, offset0, cam.GetViewMatrix(), cam.GetProjectionMatrix());
+                GL.DrawElements(PrimitiveType.Triangles, indsLoading.Length, DrawElementsType.UnsignedInt, 0);
+            }
 
             GL.Finish();
             GL.Enable(EnableCap.DepthTest);
@@ -518,6 +680,9 @@ namespace OpenTKSlicingModule
             Image.ChangeSliceDepth(SliceDepth);
         }
 
+        /// <summary>
+        /// Sets the slice vertices when slice depth is changed
+        /// </summary>
         private void SetSliceVerts() {
             for (int i = 0; i < vertsSq.Length; i++)
             {
@@ -536,10 +701,10 @@ namespace OpenTKSlicingModule
         /// Updates the list which slice image chunks are visible
         /// </summary>
         private void CheckVisibleChunks() {
-            Vector3 dataDimsHit = new Vector3(DataWidth / 2 + Image.GetChunkDist(), DataHeight / 2 + Image.GetChunkDist(), DataDepth / 2 + Image.GetChunkDist());
+            Vector3 dataDimsHit = new Vector3(DataWidth / 2 + Image.GetChunkDist() + 1, DataHeight / 2 + Image.GetChunkDist() + 1, DataDepth / 2 + Image.GetChunkDist() + 1);
             for (int i = 0; i < Image.ChunkVisibility.Length; i++)
             {
-                Vector3 ChunkPoint = Vector3.Transform(new Vector3(vertsSq[i][0] + Image.GetChunkDist(), vertsSq[i][1] - Image.GetChunkDist(), vertsSq[i][2]), Rots);
+                Vector3 ChunkPoint = Vector3.Transform(new Vector3(vertsSq[i][0] + Image.GetChunkCenterOffset(), vertsSq[i][1] - Image.GetChunkCenterOffset(), vertsSq[i][2]), Rots);
                 if (MathF.Abs(ChunkPoint.X) > dataDimsHit.X || MathF.Abs(ChunkPoint.Y) > dataDimsHit.Y || MathF.Abs(ChunkPoint.Z) > dataDimsHit.Z)
                 {
                     Image.ChunkVisibility[i] = false;
@@ -698,7 +863,10 @@ namespace OpenTKSlicingModule
         /// <param name="end">True if big endian, false if little endian</param>
         public void SetEndian(bool end)
         {
-            Image.SetBigEndian(end);
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetBigEndian(end, cToken);
         }
 
         /// <summary>
@@ -707,7 +875,10 @@ namespace OpenTKSlicingModule
         /// <param name="path"></param>
         public void SetFilepath(string path)
         {
-            Image.SetFilepath(path);
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetFilepath(path, cToken);
         }
 
         /// <summary>
@@ -716,7 +887,10 @@ namespace OpenTKSlicingModule
         /// <param name="byteDepth">How many bytes per volume data value</param>
         public void SetByteDepth(int byteDepth)
         {
-            Image.SetByteDepth(byteDepth);
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetByteDepth(byteDepth, cToken);
         }
 
         /// <summary>
@@ -740,8 +914,11 @@ namespace OpenTKSlicingModule
         /// Sets the filetype used by the volume data
         /// </summary>
         /// <param name="fType">Volumedata filetype</param>
-        public void SetFileType(SliceImage.FileType fType) { 
-            Image.SetFileType(fType);
+        public void SetFileType(SliceImage.FileType fType) {
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetFileType(fType,cToken);
         }
 
         /// <summary>
@@ -749,7 +926,10 @@ namespace OpenTKSlicingModule
         /// </summary>
         /// <param name="iMethod">Used interpolation method</param>
         public void SetInterpolationMethod(SliceImage.InterpolationMethod iMethod) {
-            Image.SetInterpolationMethod(iMethod);
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetInterpolationMethod(iMethod, cToken);
         }
 
         /// <summary>
@@ -758,14 +938,19 @@ namespace OpenTKSlicingModule
         /// <param name="template">String which filenames in the folder will be filtered by</param>
         public void SetFileTemplate(string template)
         {
-            Image.SetFileTemplate(template);
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetFileTemplate(template, cToken);
         }
 
         /// <summary>
         /// Sets the maximum scale (unless low LoD scale is bigger) which the program will interpolate the slice
         /// </summary>
         /// <param name="scale">Scale of the slice</param>
-        public void SetInterpolationScale(float scale) { 
+        public void SetInterpolationScale(float scale) {
+            if(scale >= 1) scale = MathHelper.NextPowerOfTwo(scale);
+            if (scale < 1) scale = 1 / MathHelper.NextPowerOfTwo(1/scale);
             Image.SetInterpolationScale(scale);
         }
 
@@ -773,8 +958,29 @@ namespace OpenTKSlicingModule
         /// Sets the Low LoD maximum memory usage size in MB (can be a bit more due to internal data structures)
         /// </summary>
         /// <param name="maxSize">Maximum size of low LoD used memory in MB</param>
-        public void SetLowLoDMaxSize(long maxSize) { 
-            Image.SetLowLodMaxSize(maxSize);
+        public void SetLowLoDMaxSize(long maxSize) {
+            CancelLowLoDThread.Cancel();
+            CancelLowLoDThread = new CancellationTokenSource();
+            CancellationToken cToken = CancelLowLoDThread.Token;
+            Image.SetLowLodMaxSize(maxSize, cToken);
+        }
+
+        /// <summary>
+        /// Set used what axis aligns with volumetric data's presentation
+        /// </summary>
+        /// <param name="axis">Axis th</param>
+        public void SetUsedAxis(Axis axis) { 
+            UsedAxis = axis;
+            SetAxisText();
+            SetBoxColors();
+        }
+
+        /// <summary>
+        /// Reads if low LoD model is ready to be used
+        /// </summary>
+        /// <returns></returns>
+        public bool LowLoDModelReady() {
+            return Image.GetLowLoDState();
         }
 
         /// <summary>
@@ -792,8 +998,8 @@ namespace OpenTKSlicingModule
         /// <param name="height">Heigth of viewport</param>
         public void Resize(float width, float height)
         {
-            mouseMult.X = MathF.PI / (float)width;//6284f / ((float)width); // Pi * 2 * 1000 aprox 6284f
-            mouseMult.Y = MathF.PI / (float)height; //6284f / ((float)height);
+            mouseMult.X = MathF.PI / (float)width;
+            mouseMult.Y = MathF.PI / (float)height;
             GL.Viewport(0, 0, Convert.ToInt32(width), Convert.ToInt32(height));
             cam.AspectRatio = (float)width / (float)height;
             size = new Vector2(width, height);

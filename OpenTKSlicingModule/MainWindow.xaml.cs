@@ -24,6 +24,7 @@ namespace OpenTKSlicingModule
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string status = "Main window";
         public MainWindow()
         {
             InitializeComponent();
@@ -34,8 +35,7 @@ namespace OpenTKSlicingModule
         }
 
         void timer_Tick(object sender, EventArgs e) {
-            string status = "MainWindow ";
-            status = status + VolViewer.GetSliceStatus();
+            status = VolViewer.GetSliceStatus();
             this.Title = status;
         }
     }

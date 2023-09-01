@@ -14,9 +14,7 @@ void main()
     if(abs(FragPos.x) >= CubeDims.x || abs(FragPos.y) >= CubeDims.y || abs(FragPos.z) >= CubeDims.z) discard;
     else {
         float intensity = texture(texture0, texCoord).x;
-        if(intensity < LvlMin) intensity = 0.0;
-        else if (intensity > LvlMax) intensity = 1.0;
-        else intensity = (intensity-LvlMin)*((1)/(LvlMax-LvlMin));
+        intensity = (intensity-LvlMin)*((1)/(LvlMax-LvlMin));
         vec4 col = vec4(intensity, intensity, intensity,1);
         FragColor = col;
     }

@@ -158,7 +158,7 @@ namespace OpenTKSlicingModule
                                         if (token.IsCancellationRequested) return;
                                         Vector3 LowLoDValuePosition = new Vector3(k * LowLoDUnitSize, j * LowLoDUnitSize, i * LowLoDUnitSize);
 
-                                        Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z, LowLoDVolDataScale, fs);
+                                        Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z, true, fs);
                                         for (int l = 0; l < pixelBytes.Length; l++)
                                         {
                                             bytes[((j * LowLoDVolDataWidth + k) * ByteSize) + l] = pixelBytes[l];
@@ -183,7 +183,7 @@ namespace OpenTKSlicingModule
                                     if (token.IsCancellationRequested) return;
                                     Vector3 LowLoDValuePosition = new Vector3(k * LowLoDUnitSize, j * LowLoDUnitSize, i * LowLoDUnitSize);
 
-                                    Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z, LowLoDVolDataScale);
+                                    Interpolate(ref pixelBytes, LowLoDValuePosition.X, LowLoDValuePosition.Y, LowLoDValuePosition.Z, true);
                                     for (int l = 0; l < pixelBytes.Length; l++)
                                     {
                                         bytes[((j * LowLoDVolDataWidth + k) * ByteSize) + l] = pixelBytes[l];
@@ -363,7 +363,7 @@ namespace OpenTKSlicingModule
                                                         float y = MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1);
                                                         float z = MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1);
 
-                                                        Interpolate(ref pixelBytes, x, y, z, scale, fs);
+                                                        Interpolate(ref pixelBytes, x, y, z, false, fs);
                                                         //Interpolations++;
                                                         for (int l = 0; l < ByteSize; l++)
                                                         {
@@ -412,7 +412,7 @@ namespace OpenTKSlicingModule
                                                 }
                                                 else
                                                 {
-                                                    Interpolate(ref pixelBytes, MathHelper.Clamp(w2 - texelPosition.X, 0, DataWidth - 1), MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1), MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1), scale);
+                                                    Interpolate(ref pixelBytes, MathHelper.Clamp(w2 - texelPosition.X, 0, DataWidth - 1), MathHelper.Clamp(h2 - texelPosition.Y, 0, DataHeight - 1), MathHelper.Clamp(texelPosition.Z + d2, 0, DataDepth - 1), false);
                                                     //Interpolations++;
                                                     for (int l = 0; l < ByteSize; l++)
                                                     {
@@ -479,7 +479,7 @@ namespace OpenTKSlicingModule
         /// <param name="bytes">Byte array where the interpolate value is calculated</param>
         /// <param name="pos">Position of the file where the interpolated value is</param>
         /// <param name="fs">Filestream to the raw file</param>
-        private void Interpolate(ref byte[] bytes, float x, float y, float z, float scale, FileStream fs)
+        private void Interpolate(ref byte[] bytes, float x, float y, float z, bool lowLoD, FileStream fs)
         {
 
             byte[] pixelBytes = new byte[ByteSize];
@@ -489,7 +489,7 @@ namespace OpenTKSlicingModule
                                                            z < 1 || z > DataDepth - 1)) {
                 method = InterpolationMethod.Trilinear;
             }
-            if (scale <= 1) method = InterpolationMethod.NearestNeighbor;
+            if (lowLoD) method = InterpolationMethod.NearestNeighbor;
             //In case if over 1 interpolation scale is wanted to automaticly turn into trilinear interpolation
             //if (scale > 1 && method == InterpolationMethod.NearestNeighbor) method = InterpolationMethod.Trilinear;
             switch (method) {
@@ -750,7 +750,7 @@ namespace OpenTKSlicingModule
         /// <param name="x">Coordinate X as a absolute coordinate</param>
         /// <param name="y">Coordinate Y as a absolute coordinate</param>
         /// <param name="z">Coordinate Z as a absolute coordinate</param>
-        private void Interpolate(ref byte[] bytes, float x, float y, float z, float scale)
+        private void Interpolate(ref byte[] bytes, float x, float y, float z, bool lowLoD)
         {
             byte[] pixelBytes = new byte[ByteSize];
             InterpolationMethod method = Method;
@@ -760,7 +760,7 @@ namespace OpenTKSlicingModule
             {
                 method = InterpolationMethod.Trilinear;
             }
-            if(scale <= 1) method = InterpolationMethod.NearestNeighbor;
+            if(lowLoD) method = InterpolationMethod.NearestNeighbor;
             //In case if over 1 interpolation scale is wanted to automaticly turn into trilinear interpolation
             //if (scale > 1 && method == InterpolationMethod.NearestNeighbor) method = InterpolationMethod.Trilinear;
             switch (method)

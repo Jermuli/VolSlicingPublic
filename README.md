@@ -16,6 +16,8 @@ Z resetoi pannauksen takaisin keskipisteeseen
 
 X siirtää poikkileikkauksen keskelle (0)
 
+C resetoi kameran rotaatiot takaisin oletusnäkymään
+
 ## Kääntäminen
 
 Visual studio projektia pitäisi pystyä ajamaan suoraan visual studiolla, 

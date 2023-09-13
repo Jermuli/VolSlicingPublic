@@ -25,12 +25,15 @@ namespace OpenTKSlicingModule
     public partial class MainWindow : Window
     {
         private string status = "Main window";
+
+        static System.Timers.Timer _timer = new System.Timers.Timer();
         public MainWindow()
         {
             InitializeComponent();
-            DispatcherTimer timer = new DispatcherTimer();
+            DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Send);
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += timer_Tick;
+
             timer.Start();
         }
 

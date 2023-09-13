@@ -372,6 +372,8 @@ namespace OpenTKSlicingModule
             if (scene.LowLoDModelReady()) {
                 if (Keyboard.IsKeyDown(Key.Z)) scene.ResetOffset();
                 if (Keyboard.IsKeyDown(Key.X)) SliceDepthSlider.Value = 0;
+                if (Keyboard.IsKeyDown(Key.C)) scene.ResetRotate();
+                //if (Keyboard.IsKeyDown(Key.L)) scene.TestOffset(); Used to take screenshots to thesis
             }
         }
 

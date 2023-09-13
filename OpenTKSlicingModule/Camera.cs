@@ -109,5 +109,13 @@ namespace OpenTKSlicingModule
             _right = Vector3.Normalize(Vector3.Cross(_up, camDir));
             _up = Vector3.Cross(camDir, _right);
         }
+
+        /// <summary>
+        /// Resets the up direction of the camera
+        /// </summary>
+        public void ResetCamUp() { 
+            _up = Vector3.UnitY;
+            _right = -Vector3.UnitX;
+        }
     }
 }

@@ -757,6 +757,20 @@ namespace OpenTKSlicingModule
         }
 
         /// <summary>
+        /// Resets the rotations of the camera back to the default view
+        /// </summary>
+        public void ResetRotate() {
+            Quaternion quart = Quaternion.FromEulerAngles(0, 0, 0);
+            cam.Position = new Vector3(0, 0, -cam.Position.Length);
+            Rots = quart;
+
+            RotatedOffset = new Vector3(0, 0, 0);
+            cam.ResetCamUp();
+            Image.ChangeSliceRotations(Rots);
+            CheckVisibleChunks();
+        }
+
+        /// <summary>
         /// Starts tracking mouse movements for panning the camera view
         /// </summary>
         /// <param name="start">Starting mousePoint</param>
@@ -845,6 +859,15 @@ namespace OpenTKSlicingModule
         public void ResetOffset()
         {
             cam.offset = new Vector3(0f, 0f, 0f);
+            RotatedOffset = new Vector3(0f, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Set offset of the camera to a precise location. Used for taking screenshots to thesis
+        /// </summary>
+        public void TestOffset()
+        {
+            cam.offset = new Vector3(280f, 145f, 0f);
             RotatedOffset = new Vector3(0f, 0f, 0f);
         }
 
